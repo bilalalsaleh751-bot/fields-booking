@@ -1,0 +1,36 @@
+/* RESET GLOBAL STYLE */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  font-family: "Inter", sans-serif;
+  background: #ffffff;
+}
+
+/* REMOVE VITE ROOT LIMITS */
+#root {
+  width: 100%;
+  height: auto;
+  max-width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  text-align: left !important;
+}
+
+/* GENERAL UTILITIES */
+.app-root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* IMG FIX - FULL BLEED */
+img {
+  user-select: none;
+  -webkit-user-drag: none;
+}
