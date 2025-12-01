@@ -1,9 +1,13 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./Home.css";
 
 import PopularSports from "../components/PopularSports";
 
+
 export default function Home() {
+  const navigate = useNavigate();
+
   const [sport, setSport] = useState("Football");
   const [city, setCity] = useState("Beirut");
   const [date, setDate] = useState("");
@@ -42,9 +46,20 @@ export default function Home() {
     },
   ];
 
+  // 🔥 Handle search → go to Discover page
+  const handleSearch = () => {
+    if (!date) {
+      alert("Please select a date.");
+      return;
+    }
+
+    navigate(
+      `/discover?sport=${sport}&city=${city}&date=${date}&time=${time}`
+    );
+  };
+
   return (
     <div className="home-page">
-
       {/* HERO SECTION */}
       <div className="hero">
         <img
@@ -97,7 +112,9 @@ export default function Home() {
               <option>18:00</option>
             </select>
 
-            <button className="find-btn">Find Courts</button>
+            <button className="find-btn" onClick={handleSearch}>
+              Find Courts
+            </button>
           </div>
         </div>
       </div>

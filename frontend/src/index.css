@@ -1,11 +1,12 @@
-/* RESET */
+
+/* --- RESET --- */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-/* GLOBAL */
+/* --- GLOBAL --- */
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
@@ -19,7 +20,7 @@ body {
   flex-direction: column;
 }
 
-/* HEADER */
+/* --- HEADER --- */
 .main-header {
   display: flex;
   align-items: center;
@@ -71,7 +72,7 @@ body {
   color: #0ea5e9;
 }
 
-/* HEADER ACTIONS */
+/* --- HEADER ACTIONS --- */
 .nav-actions {
   display: flex;
   align-items: center;
@@ -107,12 +108,14 @@ body {
   background: #0284c7;
 }
 
-/* HOME LAYOUT */
+/* --- HOME LAYOUT --- */
 .home {
   max-width: 1200px;
   margin: 24px auto 40px;
   padding: 0 24px;
 }
 
-/* HERO */
+/* --- HERO --- */
 /* HERO - Updated for SportLB style */
+/* (You can complete your hero CSS here if you want) */
+

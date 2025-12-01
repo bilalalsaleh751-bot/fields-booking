@@ -1,4 +1,5 @@
 import "./SportCard.css";
+import { Link } from "react-router-dom";
 
 export default function SportCard({ name, image, trending }) {
   return (
@@ -11,7 +12,12 @@ export default function SportCard({ name, image, trending }) {
       </div>
 
       <div className="sport-footer">
-        <a className="explore-link">Explore Courts →</a>
+        <Link
+          to={`/discover?sport=${name}`}
+          className="explore-link"
+        >
+          Explore Courts →
+        </Link>
       </div>
     </div>
   );
