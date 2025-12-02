@@ -1,132 +1,240 @@
 // src/pages/Discover.jsx
 import { useState, useEffect } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import FieldCard from "../components/search/FieldCard";
 import "./Discover.css";
 
 export default function Discover() {
   const [fields, setFields] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Values جايين من الهوم (search bar)
-  const sportFromUrl = searchParams.get("sport") || "";
-  const cityFromUrl = searchParams.get("city") || "";
-  const date = searchParams.get("date") || "";
-  const time = searchParams.get("time") || "";
-  const minFromUrl = searchParams.get("min") || "";
-  const maxFromUrl = searchParams.get("max") || "";
+  // ================== STATE ==================
+  const [sport, setSport] = useState("");
+  const [city, setCity] = useState("");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
 
-  // Sidebar filters (state داخلي للصفحة)
-  const [sport, setSport] = useState(sportFromUrl);
-  const [city, setCity] = useState(cityFromUrl);
-  const [minPrice, setMinPrice] = useState(minFromUrl || 0);
-  const [maxPrice, setMaxPrice] = useState(maxFromUrl || 200);
+  const [minPrice, setMinPrice] = useState(0);
+  const [maxPrice, setMaxPrice] = useState(200);
+
   const [minRating, setMinRating] = useState(0);
+  const [indoor, setIndoor] = useState(""); // "", "true", "false"
+  const [surfaceType, setSurfaceType] = useState("");
+  const [owner, setOwner] = useState("");
+  const [amenities, setAmenities] = useState([]);
+
   const [sortBy, setSortBy] = useState("relevance");
   const [viewMode, setViewMode] = useState("list"); // list | map
 
-  // تحميل الملاعب من الـ backend
+  // ================== SYNC FROM URL ==================
+  useEffect(() => {
+    const sSport = searchParams.get("sport") || "";
+    const sCity = searchParams.get("city") || "";
+    const sDate = searchParams.get("date") || "";
+    const sTime = searchParams.get("time") || "";
+
+    const sMin = searchParams.get("min");
+    const sMax = searchParams.get("max");
+
+    const sMinRating = searchParams.get("minRating");
+    const sIsIndoor = searchParams.get("isIndoor") || "";
+    const sSurface = searchParams.get("surfaceType") || "";
+    const sOwner = searchParams.get("owner") || "";
+    const sSortBy = searchParams.get("sortBy") || "relevance";
+    const sView = searchParams.get("view") || "list";
+
+    // amenities from URL (either repeated or comma-separated)
+    const amenitiesMulti = searchParams.getAll("amenities");
+    let sAmenities = [];
+    if (amenitiesMulti.length > 0) {
+      sAmenities = amenitiesMulti;
+    } else {
+      const one = searchParams.get("amenities");
+      if (one) {
+        sAmenities = one.split(",").map((a) => a.trim()).filter(Boolean);
+      }
+    }
+
+    setSport(sSport);
+    setCity(sCity);
+    setDate(sDate);
+    setTime(sTime);
+
+    setMinPrice(sMin ? Number(sMin) : 0);
+    setMaxPrice(sMax ? Number(sMax) : 200);
+
+    setMinRating(sMinRating ? Number(sMinRating) : 0);
+    setIndoor(sIsIndoor);
+    setSurfaceType(sSurface);
+    setOwner(sOwner);
+    setSortBy(sSortBy);
+    setViewMode(sView);
+    setAmenities(sAmenities);
+  }, [searchParams]);
+
+  // ================== FETCH FROM BACKEND ==================
   useEffect(() => {
     const loadFields = async () => {
       try {
-        const params = new URLSearchParams({
-          sport: sportFromUrl,
-          city: cityFromUrl,
-          min: minFromUrl,
-          max: maxFromUrl,
-        });
+        setLoading(true);
+        setError("");
 
-        const res = await fetch(
-          `http://localhost:5000/api/fields/search?${params.toString()}`
-        );
+        const qs = searchParams.toString();
+        const url = qs
+          ? `http://localhost:5000/api/fields/search?${qs}`
+          : `http://localhost:5000/api/fields/search`;
+
+        const res = await fetch(url);
+        if (!res.ok) {
+          throw new Error("Failed to fetch fields");
+        }
 
         const data = await res.json();
-        setFields(data.fields || []);
+        setFields(Array.isArray(data.fields) ? data.fields : []);
       } catch (err) {
         console.error("Error loading fields:", err);
+        setError("Failed to load fields");
+        setFields([]);
       } finally {
         setLoading(false);
       }
     };
 
     loadFields();
-  }, [sportFromUrl, cityFromUrl, minFromUrl, maxFromUrl]);
+  }, [searchParams]);
 
-  // تطبيق الفلترة والترتيب على النتائج
+  // ================== CLIENT-SIDE FILTER + SORT ==================
   const getVisibleFields = () => {
     let result = [...fields];
 
-    // فلترة بالسعر
+    // price
     result = result.filter((f) => {
       const p = f.pricePerHour || 0;
       return p >= Number(minPrice || 0) && p <= Number(maxPrice || 100000);
     });
 
-    // فلترة بالرّيتينغ
+    // rating
     if (minRating > 0) {
       result = result.filter(
         (f) => (f.averageRating || 0) >= Number(minRating)
       );
     }
 
-    // Sorting
-    if (sortBy === "price-asc") {
-      result.sort((a, b) => a.pricePerHour - b.pricePerHour);
-    } else if (sortBy === "price-desc") {
-      result.sort((a, b) => b.pricePerHour - a.pricePerHour);
-    } else if (sortBy === "rating-desc") {
-      result.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
+    // indoor / outdoor
+    if (indoor === "true") {
+      result = result.filter((f) => f.isIndoor === true);
+    } else if (indoor === "false") {
+      result = result.filter((f) => f.isIndoor === false);
     }
-    // "relevance" => خليهم مثل ما راجعين من الـ backend
+
+    // surface
+    if (surfaceType) {
+      const s = surfaceType.toLowerCase();
+      result = result.filter(
+        (f) => (f.surfaceType || "").toLowerCase() === s
+      );
+    }
+
+    // owner
+    if (owner) {
+      const o = owner.toLowerCase();
+      result = result.filter((f) =>
+        (f.owner?.name || "").toLowerCase().includes(o)
+      );
+    }
+
+    // amenities (ALL must exist)
+    if (amenities.length > 0) {
+      result = result.filter((f) => {
+        const fieldAmenities = f.amenities || [];
+        return amenities.every((a) => fieldAmenities.includes(a));
+      });
+    }
+
+    // sort
+    if (sortBy === "price_low") {
+      result.sort((a, b) => (a.pricePerHour || 0) - (b.pricePerHour || 0));
+    } else if (sortBy === "price_high") {
+      result.sort((a, b) => (b.pricePerHour || 0) - (a.pricePerHour || 0));
+    } else if (sortBy === "rating") {
+      result.sort(
+        (a, b) => (b.averageRating || 0) - (a.averageRating || 0)
+      );
+    }
+    // relevance = كما رجعت من الباك إند
 
     return result;
   };
 
   const visibleFields = getVisibleFields();
 
-  // تحديث الـ URL لما نضغط Apply Filters (مثل SportLB)
+  // ================== APPLY FILTERS (UPDATE URL) ==================
   const applyFilters = () => {
-    const params = new URLSearchParams({
-      sport,
-      city,
-      min: minPrice,
-      max: maxPrice,
-      date,
-      time,
-    });
+    const params = new URLSearchParams();
 
-    navigate(`/discover?${params.toString()}`);
+    if (sport) params.set("sport", sport);
+    if (city) params.set("city", city);
+    if (date) params.set("date", date);
+    if (time) params.set("time", time);
+
+    if (minPrice) params.set("min", String(minPrice));
+    if (maxPrice) params.set("max", String(maxPrice));
+
+    if (minRating > 0) params.set("minRating", String(minRating));
+    if (indoor) params.set("isIndoor", indoor);
+    if (surfaceType) params.set("surfaceType", surfaceType);
+
+    if (amenities.length > 0) {
+      // backend يدعم الاثنين: amenities=a,b,c أو amenities=a&amenities=b
+      params.set("amenities", amenities.join(","));
+    }
+
+    if (owner) params.set("owner", owner);
+    if (sortBy) params.set("sortBy", sortBy);
+    if (viewMode) params.set("view", viewMode);
+
+    navigate({
+      pathname: location.pathname,
+      search: params.toString(),
+    });
   };
 
+  const toggleAmenity = (name) => {
+    setAmenities((prev) =>
+      prev.includes(name) ? prev.filter((a) => a !== name) : [...prev, name]
+    );
+  };
+
+  // ================== RENDER ==================
   return (
     <div className="discover-page">
-      {/* HEADER TITLE */}
+      {/* HEADER TITLE + SEARCH ROW */}
       <div className="discover-header">
         <h1>Discover</h1>
         <p>Find courts across Lebanon</p>
 
-        {/* Search bar مثل SportLB (بس لسا بدون backend للبحث النصي) */}
         <div className="discover-search-row">
           <input
             type="text"
             className="discover-search-input"
             placeholder="Search by name, location, or sport..."
-            // (ممكن لاحقاً نربطه مع /search بالاسم)
+            // ممكن نربطه لاحقاً مع q في الـ backend
           />
           <button className="discover-location-btn">Use My Location</button>
         </div>
       </div>
 
-      {/* MAIN LAYOUT: sidebar + content */}
+      {/* MAIN LAYOUT */}
       <div className="discover-layout">
-        {/* ================= SIDEBAR FILTERS ================= */}
+        {/* SIDEBAR */}
         <aside className="filters-sidebar">
           <h3>Filters</h3>
 
-          {/* Sport */}
           <div className="filter-block">
             <span className="filter-label">Sport</span>
             <select
@@ -142,7 +250,6 @@ export default function Discover() {
             </select>
           </div>
 
-          {/* City */}
           <div className="filter-block">
             <span className="filter-label">City</span>
             <select
@@ -158,13 +265,67 @@ export default function Discover() {
             </select>
           </div>
 
-          {/* Availability Date (PDR فقط — بدون backend حقيقي للساعة) */}
+          <div className="filter-block">
+            <span className="filter-label">Type</span>
+            <select
+              value={indoor}
+              onChange={(e) => setIndoor(e.target.value)}
+              className="filter-select"
+            >
+              <option value="">Indoor & Outdoor</option>
+              <option value="true">Indoor</option>
+              <option value="false">Outdoor</option>
+            </select>
+          </div>
+
+          <div className="filter-block">
+            <span className="filter-label">Surface</span>
+            <select
+              value={surfaceType}
+              onChange={(e) => setSurfaceType(e.target.value)}
+              className="filter-select"
+            >
+              <option value="">Any surface</option>
+              <option value="Turf">Turf</option>
+              <option value="Grass">Grass</option>
+              <option value="Hardwood">Hardwood</option>
+            </select>
+          </div>
+
+          <div className="filter-block">
+            <span className="filter-label">Amenities</span>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {["Parking", "Lights", "Showers", "Lockers", "AC"].map((a) => (
+                <label key={a} style={{ fontSize: 13 }}>
+                  <input
+                    type="checkbox"
+                    checked={amenities.includes(a)}
+                    onChange={() => toggleAmenity(a)}
+                    style={{ marginRight: 6 }}
+                  />
+                  {a}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="filter-block">
+            <span className="filter-label">Field Owner</span>
+            <input
+              type="text"
+              value={owner}
+              onChange={(e) => setOwner(e.target.value)}
+              placeholder="Owner name..."
+              className="filter-input"
+            />
+          </div>
+
           <div className="filter-block">
             <span className="filter-label">Availability Date</span>
             <input
               type="date"
               value={date}
-              onChange={() => {}}
+              onChange={(e) => setDate(e.target.value)}
               className="filter-input"
             />
             <small className="filter-hint">
@@ -172,7 +333,6 @@ export default function Discover() {
             </small>
           </div>
 
-          {/* Price slider */}
           <div className="filter-block">
             <span className="filter-label">Price per Hour</span>
             <div className="price-range-row">
@@ -183,14 +343,13 @@ export default function Discover() {
                 max="200"
                 step="5"
                 value={maxPrice}
-                onChange={(e) => setMaxPrice(e.target.value)}
+                onChange={(e) => setMaxPrice(Number(e.target.value))}
                 className="filter-range"
               />
               <span>${maxPrice}</span>
             </div>
           </div>
 
-          {/* Rating slider */}
           <div className="filter-block">
             <span className="filter-label">Minimum Rating</span>
             <div className="price-range-row">
@@ -201,22 +360,20 @@ export default function Discover() {
                 max="5"
                 step="0.5"
                 value={minRating}
-                onChange={(e) => setMinRating(e.target.value)}
+                onChange={(e) => setMinRating(Number(e.target.value))}
                 className="filter-range"
               />
               <span>5.0</span>
             </div>
           </div>
 
-          {/* Apply filters button */}
           <button className="filters-apply-btn" onClick={applyFilters}>
             Apply Filters
           </button>
         </aside>
 
-        {/* ================= RESULTS + SORT + MAP/LIST ================= */}
+        {/* RESULTS */}
         <section className="discover-results">
-          {/* Top row: results count + sort + view switch */}
           <div className="results-top-row">
             <div className="results-count">
               {loading
@@ -225,13 +382,17 @@ export default function Discover() {
               {date && (
                 <span className="results-date">
                   &nbsp;· for <strong>{date}</strong>
-                  {time && <> at <strong>{time}</strong></>}
+                  {time && (
+                    <>
+                      {" "}
+                      at <strong>{time}</strong>
+                    </>
+                  )}
                 </span>
               )}
             </div>
 
             <div className="results-actions">
-              {/* View switch */}
               <div className="view-switch">
                 <button
                   className={
@@ -255,21 +416,21 @@ export default function Discover() {
                 </button>
               </div>
 
-              {/* Sorting */}
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 className="sort-select"
               >
                 <option value="relevance">Sorted by Relevance</option>
-                <option value="price-asc">Price: Low to High</option>
-                <option value="price-desc">Price: High to Low</option>
-                <option value="rating-desc">Highest Rated</option>
+                <option value="price_low">Price: Low to High</option>
+                <option value="price_high">Price: High to Low</option>
+                <option value="rating">Highest Rated</option>
               </select>
             </div>
           </div>
 
-          {/* MAIN CONTENT: LIST or MAP */}
+          {error && <p className="error-message">{error}</p>}
+
           {viewMode === "map" ? (
             <div className="map-placeholder">
               <p>🗺 Map view (to be connected later with Google Maps).</p>
@@ -283,8 +444,6 @@ export default function Discover() {
               {visibleFields.map((field, index) => (
                 <div key={field._id} className="court-row">
                   <FieldCard field={field} />
-
-                  {/* Ranking Q&A section مثل SportLB */}
                   <details className="ranking-details">
                     <summary>
                       Why is "{field.name}" ranked #{index + 1}?

@@ -247,3 +247,13 @@
   margin-top: 4px;
   color: #6b7280;
 }
+
+/* Error message */
+
+.error-message {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fee2e2;
+  color: #991b1b;
+  margin-bottom: 8px;
+}

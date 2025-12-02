@@ -10,7 +10,7 @@ import {
 
 const router = express.Router();
 
-// SEED PDR FIELDS
+// SEED PDR FIELDS (dev only)
 router.post("/seed", seedFields);
 
 // SEARCH FIELDS (used by Discover)
