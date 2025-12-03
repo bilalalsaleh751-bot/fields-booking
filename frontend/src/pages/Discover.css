@@ -257,3 +257,10 @@
   color: #991b1b;
   margin-bottom: 8px;
 }
+
+.discover-page .field-card-image {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 12px;
+}
