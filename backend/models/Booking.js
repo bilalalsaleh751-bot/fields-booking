@@ -1,4 +1,3 @@
-// backend/models/Booking.js
 import mongoose from "mongoose";
 
 const bookingSchema = new mongoose.Schema(
@@ -9,16 +8,29 @@ const bookingSchema = new mongoose.Schema(
       required: true,
     },
 
-    // لو حابب تربط مع user لاحقاً
-    customerName: { type: String, required: true },
-    customerPhone: { type: String, required: true },
-    customerEmail: { type: String },
+    userName: { type: String, required: true },
+    userEmail: { type: String, required: true },
+    userPhone: { type: String, required: true },
 
-    date: { type: String, required: true },      // "2025-11-28"
-    time: { type: String, required: true },      // "18:00"
-    durationHours: { type: Number, default: 1 }, // 1, 2, 3...
+    date: {
+      type: String, // YYYY-MM-DD
+      required: true,
+    },
 
-    totalPrice: { type: Number, required: true },
+    startTime: {
+      type: String, // "17:00"
+      required: true,
+    },
+
+    duration: {
+      type: Number, // hours
+      required: true,
+    },
+
+    totalPrice: {
+      type: Number,
+      required: true,
+    },
 
     status: {
       type: String,
@@ -29,5 +41,4 @@ const bookingSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const Booking = mongoose.model("Booking", bookingSchema);
-export default Booking;
+export default mongoose.model("Booking", bookingSchema);

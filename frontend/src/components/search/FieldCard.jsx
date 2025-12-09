@@ -17,31 +17,55 @@ export default function FieldCard({ field }) {
 
   return (
     <div className="field-card">
-      <img src={mainImage} alt={name} className="field-img" />
 
+      {/* IMAGE */}
+      <img
+        src={mainImage || "/images/placeholder-field.jpg"}
+        alt={name}
+        className="field-img"
+      />
+
+      {/* INFO + ACTIONS */}
       <div className="field-info">
-        <h3 className="field-name">{name}</h3>
 
-        <p className="field-city">
-          {city} · {sport}
-        </p>
+        <div className="field-info-left">
+          <h3 className="field-name">{name}</h3>
 
-        <p className="field-price">
-          {currency || "USD"} {pricePerHour} / hour
-        </p>
-
-        {averageRating > 0 && (
-          <p className="field-rating">
-            ⭐ {averageRating.toFixed(1)}{" "}
-            <span style={{ color: "#777", fontSize: 13 }}>
-              ({reviewCount} reviews)
-            </span>
+          <p className="field-city">
+            {city} · {sport}
           </p>
-        )}
 
-        <Link to={`/field/${_id}`} className="field-details-btn">
-          View Details →
-        </Link>
+          <p className="field-price">
+            {currency || "USD"} {pricePerHour} / hour
+          </p>
+
+          {averageRating > 0 && (
+            <p className="field-rating">
+              ⭐ {averageRating.toFixed(1)}{" "}
+              <span className="field-rating-count">
+                ({reviewCount} reviews)
+              </span>
+            </p>
+          )}
+
+          <Link
+            to={`/field/${_id}`}
+            className="field-details-btn"
+          >
+            View Details →
+          </Link>
+        </div>
+
+        {/* RIGHT SIDE – BOOK NOW BUTTON */}
+        <div className="field-info-right">
+          <Link
+            to={`/booking/${_id}`}
+            className="book-now-btn"
+          >
+            Book Now
+          </Link>
+        </div>
+
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ import Footer from "./components/layout/Footer";
 import Home from "./pages/Home";
 import Discover from "./pages/Discover";
 import FieldDetails from "./pages/FieldDetails";
+import BookingFlow from "./pages/BookingFlow";
 
 import "./index.css";
 
@@ -17,14 +18,14 @@ function App() {
 
       <div className="app-root">
         <Routes>
-          {/* Homepage */}
+
           <Route path="/" element={<Home />} />
-
-          {/* Discover/Search Results */}
           <Route path="/discover" element={<Discover />} />
-
-          {/* Field Details */}
           <Route path="/field/:id" element={<FieldDetails />} />
+
+          {/* Booking Page */}
+          <Route path="/booking/:fieldId" element={<BookingFlow />} />
+
         </Routes>
       </div>
 

@@ -7,6 +7,7 @@ import connectDB from "./config/db.js";
 import fieldRoutes from "./routes/fieldRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import availabilityRoutes from "./routes/availabilityRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -15,9 +16,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ROUTES
+// FIELD ROUTES
 app.use("/api/fields", fieldRoutes);
+app.use("/api/fields", availabilityRoutes); // IMPORTANT: /api/fields/:fieldId/availability
+
+// BOOKING ROUTES
 app.use("/api/bookings", bookingRoutes);
+
+// USER ROUTES
 app.use("/api/users", userRoutes);
 
 app.get("/", (req, res) => {

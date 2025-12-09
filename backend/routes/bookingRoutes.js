@@ -2,15 +2,19 @@
 import express from "express";
 import {
   createBooking,
-  getFieldBookingsForDay,
+  getBookingById,
+  getBookingsForField,
 } from "../controllers/bookingController.js";
 
 const router = express.Router();
 
-// CREATE BOOKING
+// CREATE booking
 router.post("/", createBooking);
 
-// GET BOOKINGS FOR FIELD IN A DAY
-router.get("/field/:fieldId", getFieldBookingsForDay);
+// GET booking info by ID
+router.get("/:id", getBookingById);
+
+// GET all bookings for a specific field
+router.get("/field/:fieldId", getBookingsForField);
 
 export default router;
