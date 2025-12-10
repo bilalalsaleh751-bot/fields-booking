@@ -1,6 +1,4 @@
-import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
 
@@ -9,25 +7,30 @@ import Discover from "./pages/Discover";
 import FieldDetails from "./pages/FieldDetails";
 import BookingFlow from "./pages/BookingFlow";
 
-import "./index.css";
+// نستعمل Iframe لعرض لوحة التحكم (أفضل وأبسط وأسرع مشروعياً)
+function AdminFrame() {
+  return (
+    <iframe
+      src="/admin/index.html"
+      style={{ width: "100%", height: "100vh", border: "none" }}
+    ></iframe>
+  );
+}
 
 function App() {
   return (
     <Router>
       <Header />
 
-      <div className="app-root">
-        <Routes>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/discover" element={<Discover />} />
+        <Route path="/field/:id" element={<FieldDetails />} />
+        <Route path="/booking/:fieldId" element={<BookingFlow />} />
 
-          <Route path="/" element={<Home />} />
-          <Route path="/discover" element={<Discover />} />
-          <Route path="/field/:id" element={<FieldDetails />} />
-
-          {/* Booking Page */}
-          <Route path="/booking/:fieldId" element={<BookingFlow />} />
-
-        </Routes>
-      </div>
+        {/* Dashboard */}
+        <Route path="/admin/*" element={<AdminFrame />} />
+      </Routes>
 
       <Footer />
     </Router>

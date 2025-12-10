@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
 import "./BookingFlow.css";
 
+// خطوة خطوة للـ wizard
 const STEPS = [
   { id: 1, key: "sport", label: "Sport" },
   { id: 2, key: "area", label: "Area" },
@@ -15,7 +16,7 @@ const STEPS = [
 const SPORT_OPTIONS = ["Football", "Basketball", "Padel", "Tennis", "Volleyball"];
 const AREA_OPTIONS = ["Beirut", "Hamra", "Jounieh", "Tripoli", "Sidon"];
 
-// المدد المسموحة
+// المدد المسموحة (بالساعات)
 const DURATION_OPTIONS = [1, 1.5, 2, 3];
 
 // تحويل HH:MM إلى 12-hour مع AM/PM
@@ -33,6 +34,26 @@ function formatTimeLabel(time24) {
   return `${h}:${minutes} ${suffix}`;
 }
 
+// تقريب المدة إلى عدد slots (نستخدم تقريب للأقرب مثل الـ backend)
+function getRoundedDurationSlots(duration) {
+  const num = Number(duration) || 1;
+  return Math.max(1, Math.round(num));
+}
+
+// هل ممكن نبدأ من slot معيّن بهيدي المدة بدون ما ندعس على أوقات محجوزة؟
+function canFitDurationAtTime(slots, startTime, durationSlots) {
+  const idx = slots.findIndex((s) => s.time === startTime);
+  if (idx === -1) return false;
+
+  for (let i = 0; i < durationSlots; i++) {
+    const s = slots[idx + i];
+    if (!s || s.isBooked) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export default function BookingFlow() {
   const { fieldId } = useParams();
   const [searchParams] = useSearchParams();
@@ -43,17 +64,18 @@ export default function BookingFlow() {
   const [loadingField, setLoadingField] = useState(false);
   const [error, setError] = useState("");
 
-  // Availability slots state
+  // بيانات الـ slots
   const [slots, setSlots] = useState([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [slotsError, setSlotsError] = useState("");
 
-  // ساعات اليوم (من الـ API) لاستعمالها مع Option B
+  // ساعات اليوم (open/close) – ياخدها من الـ API أو نستنتجها من الـ slots
   const [dayHours, setDayHours] = useState({
     openHour: null,
     closeHour: null,
   });
 
+  // فورم الحجز
   const [form, setForm] = useState({
     sport: "",
     area: "",
@@ -70,7 +92,7 @@ export default function BookingFlow() {
     notes: "",
   });
 
-  // تحميل معلومات الملعب
+  // تحميل تفاصيل الملعب
   useEffect(() => {
     if (!fieldId) return;
 
@@ -92,7 +114,8 @@ export default function BookingFlow() {
           area: data.city || prev.area,
         }));
       } catch (e) {
-        console.error(e);
+        console.error("Field load error:", e);
+        setError("Could not load field data.");
       } finally {
         setLoadingField(false);
       }
@@ -101,6 +124,7 @@ export default function BookingFlow() {
     loadField();
   }, [fieldId]);
 
+  // تحديث قيمة معينة من الفورم
   const updateForm = (name, value) => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
@@ -126,14 +150,38 @@ export default function BookingFlow() {
         if (!res.ok) throw new Error("Failed to load availability");
 
         const data = await res.json();
-        setSlots(data.slots || []);
-        setDayHours({
-          openHour: data.openHour ?? null,
-          closeHour: data.closeHour ?? null,
-        });
+        const apiSlots = data.slots || [];
+
+        setSlots(apiSlots);
+
+        // نحاول ناخد openHour/closeHour من الـ API
+        let openHour = data.openHour ?? null;
+        let closeHour = data.closeHour ?? null;
+
+        // إذا الـ backend ما رجّع open/close: نستنتج من أول وآخر slot
+        if ((openHour == null || closeHour == null) && apiSlots.length > 0) {
+          const firstH = parseInt(apiSlots[0].time.split(":")[0], 10);
+          const lastH = parseInt(
+            apiSlots[apiSlots.length - 1].time.split(":")[0],
+            10
+          );
+          // آخر slot هو الساعة الأخيرة – نضيف +1 كـ closing hour تقديرًا
+          openHour = firstH;
+          closeHour = lastH + 1;
+        }
+
+        // fallback default
+        if (openHour == null || closeHour == null) {
+          openHour = 8;
+          closeHour = 23;
+        }
+
+        setDayHours({ openHour, closeHour });
       } catch (err) {
         console.error("Slots error:", err);
         setSlotsError("Could not load availability for this day.");
+        setSlots([]);
+        setDayHours({ openHour: null, closeHour: null });
       } finally {
         setSlotsLoading(false);
       }
@@ -142,7 +190,7 @@ export default function BookingFlow() {
     fetchSlots();
   }, [fieldId, form.date]);
 
-  // 🔥 OPTION B: إذا المدة أكبر من الوقت المتبقي قبل الإغلاق، نخفّضها تلقائياً
+  // 🔥 تقييد المدة بحسب الوقت المتبقي قبل الإغلاق (Option B)
   useEffect(() => {
     if (!form.time || !dayHours.closeHour) return;
 
@@ -155,7 +203,6 @@ export default function BookingFlow() {
 
     const requested = parseFloat(form.duration || "1") || 1;
 
-    // أكبر مدة مسموحة <= remainingHours
     const possibleDurations = DURATION_OPTIONS.filter(
       (d) => d <= remainingHours
     );
@@ -167,10 +214,20 @@ export default function BookingFlow() {
     );
 
     if (requested > maxAllowed) {
+      // ننزّل المدة لأكبر قيمة مسموحة
       updateForm("duration", String(maxAllowed));
     }
   }, [form.time, form.duration, dayHours.closeHour]);
 
+  // هل اليوم FULL (كل الـ slots محجوزة)؟
+  const isDayFullyBooked =
+    form.date &&
+    !slotsLoading &&
+    !slotsError &&
+    slots.length > 0 &&
+    slots.every((s) => s.isBooked);
+
+  // Next step
   const goNext = () => {
     // Validation per step
     if (step === 1 && !form.sport) {
@@ -198,28 +255,39 @@ export default function BookingFlow() {
         return setError("No available slots for this day.");
       }
 
+      if (isDayFullyBooked) {
+        return setError("This day is fully booked. Please choose another date.");
+      }
+
       if (!form.time) {
         return setError("Please pick a time from the available slots.");
       }
 
-      // لازم الوقت يكون من الـ slots ومش محجوز
-      const hasValidSlot = slots.some(
-        (s) => !s.isBooked && s.time === form.time
-      );
+      const durationSlots = getRoundedDurationSlots(form.duration);
 
-      if (!hasValidSlot) {
-        return setError("Please pick a time from the available slots.");
+      // لازم الوقت يكون من الـ slots + غير محجوز + بيكفي للمدة
+      const chosenSlot = slots.find((s) => s.time === form.time);
+      if (!chosenSlot || chosenSlot.isBooked) {
+        return setError("Please pick a valid available time.");
+      }
+
+      const fits = canFitDurationAtTime(slots, form.time, durationSlots);
+      if (!fits) {
+        return setError(
+          "This time does not have enough free hours for the selected duration."
+        );
       }
     }
 
     if (step === 5 && (!form.fullName || !form.email || !form.phone)) {
-      return setError("Fill your personal details.");
+      return setError("Please fill your personal details.");
     }
 
     setError("");
     setStep((s) => Math.min(6, s + 1));
   };
 
+  // Back
   const goBack = () => {
     setError("");
     setStep((s) => Math.max(1, s - 1));
@@ -229,6 +297,7 @@ export default function BookingFlow() {
   const totalPrice = (field?.pricePerHour || 0) * durationNumber;
   const currency = field?.currency || "USD";
 
+  // Confirm booking
   const handleConfirm = async () => {
     try {
       setError("");
@@ -464,16 +533,21 @@ export default function BookingFlow() {
                 <input
                   type="date"
                   value={form.date}
-                  onChange={(e) => updateForm("date", e.target.value)}
+                  onChange={(e) => {
+                    updateForm("date", e.target.value);
+                    // لما يغير التاريخ، نمسح الوقت القديم
+                    updateForm("time", "");
+                  }}
                 />
               </label>
 
+              {/* نخلي الـ time readOnly حتى المستخدم يختار فقط من الـ slots */}
               <label className="booking-label">
-                Time (manual)
+                Time (from slots)
                 <input
                   type="time"
                   value={form.time}
-                  onChange={(e) => updateForm("time", e.target.value)}
+                  readOnly
                 />
               </label>
 
@@ -513,26 +587,61 @@ export default function BookingFlow() {
               {form.date &&
                 !slotsLoading &&
                 !slotsError &&
-                slots.length > 0 && (
+                isDayFullyBooked && (
+                  <p className="booking-placeholder">
+                    This day is fully booked. Please select another date.
+                  </p>
+                )}
+
+              {form.date &&
+                !slotsLoading &&
+                !slotsError &&
+                slots.length > 0 &&
+                !isDayFullyBooked && (
                   <div className="booking-options-grid booking-slots-grid">
-                    {slots.map((slot) => (
-                      <button
-                        key={slot.time}
-                        type="button"
-                        disabled={slot.isBooked}
-                        onClick={() =>
-                          !slot.isBooked && updateForm("time", slot.time)
-                        }
-                        className={[
-                          "booking-slot-btn",
-                          slot.isBooked ? "booked" : "available",
-                          form.time === slot.time ? "selected" : "",
-                        ].join(" ")}
-                      >
-                        <span>{formatTimeLabel(slot.time)}</span>
-                        <small>{slot.isBooked ? "Booked" : "Available"}</small>
-                      </button>
-                    ))}
+                    {slots.map((slot) => {
+                      const durationSlots = getRoundedDurationSlots(
+                        form.duration
+                      );
+
+                      // هل هذا الوقت يقدر يخد المدة المختارة؟
+                      const fitsForDuration = canFitDurationAtTime(
+                        slots,
+                        slot.time,
+                        durationSlots
+                      );
+
+                      const disabled =
+                        slot.isBooked || !fitsForDuration;
+
+                      return (
+                        <button
+                          key={slot.time}
+                          type="button"
+                          disabled={disabled}
+                          onClick={() =>
+                            !disabled && updateForm("time", slot.time)
+                          }
+                          className={[
+                            "booking-slot-btn",
+                            slot.isBooked ? "booked" : "available",
+                            !slot.isBooked && !fitsForDuration
+                              ? "not-enough-time"
+                              : "",
+                            form.time === slot.time ? "selected" : "",
+                          ].join(" ")}
+                        >
+                          <span>{formatTimeLabel(slot.time)}</span>
+                          <small>
+                            {slot.isBooked
+                              ? "Booked"
+                              : fitsForDuration
+                              ? "Available"
+                              : "Not enough time"}
+                          </small>
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
 
