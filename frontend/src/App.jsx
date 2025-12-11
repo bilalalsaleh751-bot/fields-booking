@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
 
@@ -7,20 +7,31 @@ import Discover from "./pages/Discover";
 import FieldDetails from "./pages/FieldDetails";
 import BookingFlow from "./pages/BookingFlow";
 
-// نستعمل Iframe لعرض لوحة التحكم (أفضل وأبسط وأسرع مشروعياً)
+// نستعمل Iframe لعرض لوحة التحكم
 function AdminFrame() {
   return (
     <iframe
       src="/admin/index.html"
-      style={{ width: "100%", height: "100vh", border: "none" }}
+      style={{
+        width: "100%",
+        height: "100vh",
+        border: "none",
+        margin: 0,
+        padding: 0,
+        display: "block",
+      }}
     ></iframe>
   );
 }
 
-function App() {
+// التفاف بسيط لإخفاء الهيدر والفوتر عند /admin
+function AppLayout() {
+  const location = useLocation();
+  const isAdminPage = location.pathname.startsWith("/admin");
+
   return (
-    <Router>
-      <Header />
+    <>
+      {!isAdminPage && <Header />}
 
       <Routes>
         <Route path="/" element={<Home />} />
@@ -32,7 +43,15 @@ function App() {
         <Route path="/admin/*" element={<AdminFrame />} />
       </Routes>
 
-      <Footer />
+      {!isAdminPage && <Footer />}
+    </>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AppLayout />
     </Router>
   );
 }
