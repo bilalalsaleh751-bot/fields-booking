@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset='UTF-8'/>
+<title>Sports Booking</title>
+<link rel='stylesheet' href='styles.css'/>
+</head>
+<body>
+<header><h1>Multi-Sports Booking</h1></header>
+<section class='hero'>Welcome to Sports Booking</section>
+<section class='cards'>
+<div class='card'>Football Court</div>
+<div class='card'>Tennis Court</div>
+<div class='card'>Basketball Court</div>
+</section>
+</body>
+</html>

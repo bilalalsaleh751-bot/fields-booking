@@ -26,10 +26,28 @@
 
 .discover-search-input {
   flex: 1;
-  padding: 10px 14px;
+  padding: 1px 16px 2px; /* Optical centering */
+  height: 44px;
+  line-height: 41px;
   border-radius: 999px;
   border: 1px solid #d1d5db;
   font-size: 14px;
+  color: #0f172a;
+  background: #ffffff;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.discover-search-input::placeholder {
+  color: #9ca3af; /* Lighter placeholder */
+  font-weight: 400;
+  letter-spacing: normal;
+}
+
+.discover-search-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
 .discover-location-btn {
@@ -74,16 +92,49 @@
   font-size: 13px;
   font-weight: 600;
   margin-bottom: 6px;
-  color: #374151;
+  color: #1f2937; /* Darker for better readability */
 }
 
 .filter-select,
 .filter-input {
   width: 100%;
-  padding: 8px 10px;
+  padding: 1px 12px 2px; /* Optical centering */
+  height: 40px;
+  line-height: 37px;
   border-radius: 10px;
   border: 1px solid #d1d5db;
   font-size: 14px;
+  color: #111827;
+  background: #ffffff;
+  font-weight: 500;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.filter-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23374151' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+  cursor: pointer;
+}
+
+.filter-select:focus,
+.filter-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.filter-input::placeholder {
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.filter-select option {
+  color: #111827;
+  background: #ffffff;
+  font-weight: 500;
 }
 
 .filter-range {
@@ -183,22 +234,67 @@
 /* Sort select */
 
 .sort-select {
-  padding: 8px 10px;
+  padding: 1px 14px 2px; /* Optical centering */
+  height: 36px;
+  line-height: 33px;
   border-radius: 999px;
   border: 1px solid #d1d5db;
   font-size: 13px;
+  color: #111827;
+  background: #ffffff;
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23374151' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
 }
 
-/* Map placeholder */
+.sort-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
 
-.map-placeholder {
+.sort-select option {
+  color: #111827;
+  background: #ffffff;
+}
+
+/* Map container */
+
+.map-view-container {
+  position: relative;
+}
+
+.discover-map {
   height: 420px;
   border-radius: 16px;
   background: #f3f4f6;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: #6b7280;
+  z-index: 1;
+}
+
+/* Leaflet popup styling */
+.discover-map .leaflet-popup-content-wrapper {
+  border-radius: 10px;
+}
+
+.discover-map .leaflet-popup-content {
+  margin: 10px 12px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Location button states */
+.discover-location-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.discover-location-btn:hover:not(:disabled) {
+  background: #f3f4f6;
 }
 
 /* Results list */

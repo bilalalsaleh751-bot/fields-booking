@@ -53,10 +53,47 @@
 
 .search-box select,
 .search-box input {
-  padding: 12px 18px;
+  padding: 1px 18px 3px; /* Optical centering: slight top bias */
+  height: 48px;
+  line-height: 44px;
   border-radius: 30px;
-  border: 1px solid #ddd;
+  border: 1px solid #d1d5db;
   font-size: 15px;
+  color: #0f172a;
+  background-color: #ffffff;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  -webkit-appearance: none;
+  appearance: none;
+  vertical-align: middle;
+}
+
+.search-box select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23374151' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+  cursor: pointer;
+}
+
+.search-box input::placeholder {
+  color: #9ca3af; /* Lighter placeholder than values */
+  font-weight: 400;
+  letter-spacing: normal;
+}
+
+.search-box select:focus,
+.search-box input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+/* Style for select options */
+.search-box select option {
+  color: #111827;
+  background: #ffffff;
+  padding: 10px;
 }
 
 .find-btn {

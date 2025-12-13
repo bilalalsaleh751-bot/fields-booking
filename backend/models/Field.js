@@ -1,12 +1,13 @@
 // backend/models/Field.js
 import mongoose from "mongoose";
 
-// Subdocument for reviews
 const reviewSchema = new mongoose.Schema(
   {
     userName: { type: String, required: true },
     rating: { type: Number, required: true, min: 1, max: 5 },
     comment: { type: String, required: true },
+    response: { type: String }, // Owner response (PDR 2.6)
+    responseDate: { type: Date }, // When owner responded
     createdAt: { type: Date, default: Date.now },
   },
   { _id: false }
@@ -14,60 +15,61 @@ const reviewSchema = new mongoose.Schema(
 
 const fieldSchema = new mongoose.Schema(
   {
-    // BASIC INFO
     name: { type: String, required: true },
-    sport: { type: String, required: true }, // Football, Padel...
-    city: { type: String, required: true },  // Beirut, Sidon...
-    area: { type: String },                  // Optional neighborhood
-    address: { type: String },
+    sport: { type: String, required: false }, // Legacy field, kept for backward compatibility
+    sportType: { type: String, required: false }, // PDR 2.3 Phase 1
+    city: { type: String, required: false }, // Not required in Phase 1
+    area: String,
+    address: String,
 
-    // DESCRIPTION & MEDIA
-    description: { type: String },
-    mainImage: { type: String },             // Hero image
-    images: [{ type: String }],              // Gallery images
+    description: String,
+    mainImage: String,
+    images: [String],
 
-    // PRICING
     pricePerHour: { type: Number, required: true },
     currency: { type: String, default: "USD" },
 
-    // FIELD ATTRIBUTES
+    allowedDurations: { type: [Number], default: [1, 1.5, 2, 3] }, // PDR 2.3 - Allowed booking durations in hours
+
     isIndoor: { type: Boolean, default: false },
-    surfaceType: { type: String },           // Turf, Grass, Hardwood...
-    maxPlayers: { type: Number },
+    surfaceType: String,
+    maxPlayers: Number,
 
-    // AMENITIES & RULES
-    amenities: [{ type: String }],
-    rules: [{ type: String }],
+    amenities: [String],
+    rules: [String],
 
-    // OPENING HOURS
     openingHours: {
       open: { type: String, default: "08:00" },
       close: { type: String, default: "23:00" },
     },
 
-    // OWNER INFO
+    // 🔥 FIX — owner must be ObjectId
     owner: {
-      name: { type: String },
-      phone: { type: String },
-      email: { type: String },
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Owner",
+      required: true,
     },
 
-    // LOCATION (Google Maps)
     location: {
-      lat: { type: Number },
-      lng: { type: Number },
+      lat: Number,
+      lng: Number,
     },
 
-    // REVIEWS SUMMARY
     averageRating: { type: Number, default: 0 },
     reviewCount: { type: Number, default: 0 },
 
-    // REVIEWS LIST
+    isActive: { type: Boolean, default: true }, // PDR 2.3 Phase 2
+
+    // Availability blocking (PDR 2.3)
+    blockedDates: [{ type: String }], // Array of YYYY-MM-DD dates that are blocked
+    blockedTimeSlots: [{
+      date: { type: String }, // YYYY-MM-DD
+      timeSlots: [{ type: String }], // Array of "HH:MM" times
+    }],
+
     reviews: [reviewSchema],
   },
   { timestamps: true }
 );
 
-// ✅ Default export ONLY
-const Field = mongoose.model("Field", fieldSchema);
-export default Field;
+export default mongoose.model("Field", fieldSchema);

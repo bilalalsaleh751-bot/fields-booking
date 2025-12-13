@@ -4,11 +4,14 @@
   border-radius: 14px;
   overflow: hidden;
   box-shadow: 0 4px 18px rgba(0,0,0,0.08);
-  transition: 0.25s ease;
+  /* Only transition transform and shadow - prevents flicker on other changes */
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  will-change: transform;
 }
 
 .field-card:hover {
   transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
 }
 
 /* IMAGE */

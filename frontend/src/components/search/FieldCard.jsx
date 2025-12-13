@@ -1,28 +1,76 @@
 // src/components/search/FieldCard.jsx
+import { memo, useState, useCallback } from "react";
 import "./FieldCard.css";
 import { Link } from "react-router-dom";
 
-export default function FieldCard({ field }) {
+const API_URL = "http://localhost:5000";
+const PLACEHOLDER = "/images/placeholder-field.jpg";
+
+// Helper to get proper image URL (stable, no dynamic values)
+const getImageUrl = (img) => {
+  if (!img) return null;
+  if (img.startsWith("http")) return img;
+  return `${API_URL}/${img}`;
+};
+
+// Custom comparison: only re-render if essential field data changes
+const areEqual = (prevProps, nextProps) => {
+  const prev = prevProps.field;
+  const next = nextProps.field;
+  return (
+    prev._id === next._id &&
+    prev.name === next.name &&
+    prev.pricePerHour === next.pricePerHour &&
+    prev.mainImage === next.mainImage &&
+    prev.averageRating === next.averageRating
+  );
+};
+
+// Memoized with custom comparison to prevent unnecessary re-renders
+const FieldCard = memo(function FieldCard({ field }) {
+  const [imgError, setImgError] = useState(false);
+  
   const {
     _id,
     name,
     city,
+    area,
     sport,
+    sportType,
     pricePerHour,
     currency,
     mainImage,
+    images,
     averageRating,
     reviewCount,
   } = field;
 
+  // Stable image URL (no recalculation on re-render)
+  const rawImage = mainImage || images?.[0];
+  const displayImage = imgError ? PLACEHOLDER : (getImageUrl(rawImage) || PLACEHOLDER);
+  
+  // Build location string (handle missing values)
+  const locationParts = [city, area].filter(Boolean);
+  const locationStr = locationParts.length > 0 ? locationParts.join(", ") : "Location not set";
+  
+  // Sport type (handle both field names)
+  const displaySport = sportType || sport || "Sport";
+  
+  // Stable error handler (useCallback prevents new function on each render)
+  const handleImgError = useCallback(() => {
+    setImgError(true);
+  }, []);
+
   return (
     <div className="field-card">
 
-      {/* IMAGE */}
+      {/* IMAGE - stable src to prevent reload */}
       <img
-        src={mainImage || "/images/placeholder-field.jpg"}
+        src={displayImage}
         alt={name}
         className="field-img"
+        onError={handleImgError}
+        loading="lazy"
       />
 
       {/* INFO + ACTIONS */}
@@ -32,7 +80,7 @@ export default function FieldCard({ field }) {
           <h3 className="field-name">{name}</h3>
 
           <p className="field-city">
-            {city} · {sport}
+            {locationStr} · {displaySport}
           </p>
 
           <p className="field-price">
@@ -69,4 +117,6 @@ export default function FieldCard({ field }) {
       </div>
     </div>
   );
-}
+}, areEqual);
+
+export default FieldCard;

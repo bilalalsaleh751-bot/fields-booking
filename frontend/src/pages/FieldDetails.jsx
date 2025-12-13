@@ -1,7 +1,17 @@
 // src/pages/FieldDetails.jsx
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams, useNavigate, Link } from "react-router-dom";
+import MapDisplay from "../components/MapDisplay";
 import "./FieldDetails.css";
+
+const API_URL = "http://localhost:5000";
+
+// Helper to get proper image URL
+const getImageUrl = (img) => {
+  if (!img) return null;
+  if (img.startsWith("http")) return img;
+  return `${API_URL}/${img}`;
+};
 
 export default function FieldDetails() {
   const { id } = useParams();
@@ -15,6 +25,8 @@ export default function FieldDetails() {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewSuccess, setReviewSuccess] = useState(false);
+  const [reviewError, setReviewError] = useState("");
 
   useEffect(() => {
     const loadField = async () => {
@@ -48,6 +60,8 @@ export default function FieldDetails() {
 
     try {
       setSubmittingReview(true);
+      setReviewError("");
+      setReviewSuccess(false);
 
       const res = await fetch(
         `http://localhost:5000/api/fields/${id}/reviews`,
@@ -57,13 +71,18 @@ export default function FieldDetails() {
           body: JSON.stringify({
             rating: reviewRating,
             comment: reviewComment,
-            user: "Guest User",
+            userName: "Guest User", // Use userName to match schema
           }),
         }
       );
 
-      if (!res.ok) throw new Error("Failed to add review");
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to add review");
+      }
 
+      // Re-fetch field to get updated reviews list
       const updated = await fetch(
         `http://localhost:5000/api/fields/${id}`
       ).then((r) => r.json());
@@ -71,6 +90,12 @@ export default function FieldDetails() {
       setField(updated);
       setReviewComment("");
       setReviewRating(5);
+      setReviewSuccess(true);
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setReviewSuccess(false), 3000);
+    } catch (err) {
+      setReviewError(err.message || "Failed to submit review. Please try again.");
     } finally {
       setSubmittingReview(false);
     }
@@ -134,7 +159,7 @@ export default function FieldDetails() {
       <div className="field-hero">
         <div className="field-hero-main">
           <img
-            src={mainImage || "/images/placeholder-field.jpg"}
+            src={getImageUrl(mainImage) || "/images/placeholder-field.jpg"}
             alt={name}
             className="field-hero-main-img"
           />
@@ -158,7 +183,7 @@ export default function FieldDetails() {
         <div className="field-hero-gallery">
           {(images || []).slice(0, 3).map((img, i) => (
             <div key={i} className="field-hero-thumb">
-              <img src={img} />
+              <img src={getImageUrl(img)} alt={`${name} - ${i + 1}`} />
             </div>
           ))}
 
@@ -167,6 +192,20 @@ export default function FieldDetails() {
           )}
         </div>
       </div>
+
+      {/* FULL IMAGE GALLERY (if more than 3 images) */}
+      {images && images.length > 3 && (
+        <section className="field-gallery-full">
+          <h3>All Photos ({images.length})</h3>
+          <div className="field-gallery-grid">
+            {images.map((img, i) => (
+              <div key={i} className="field-gallery-item">
+                <img src={getImageUrl(img)} alt={`${name} - ${i + 1}`} />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* CONTENT */}
       <div className="field-main-left">
@@ -187,10 +226,13 @@ export default function FieldDetails() {
           <h3>Location</h3>
           <p>{address || city}</p>
 
-          {location && (
-            <p className="field-location-coords">
-              {location.lat}, {location.lng}
-            </p>
+          {location && location.lat && location.lng && (
+            <>
+              <p className="field-location-coords">
+                {location.lat}, {location.lng}
+              </p>
+              <MapDisplay lat={parseFloat(location.lat)} lng={parseFloat(location.lng)} name={name} />
+            </>
           )}
         </section>
 
@@ -239,7 +281,7 @@ export default function FieldDetails() {
               {reviews.map((rev, i) => (
                 <div key={i} className="field-review-card">
                   <div className="field-review-header">
-                    <span>{rev.user || "Anonymous"}</span>
+                    <span>{rev.userName || rev.user || "Anonymous"}</span>
                     <span>{rev.rating} ★</span>
                   </div>
                   <p>{rev.comment}</p>
@@ -257,11 +299,40 @@ export default function FieldDetails() {
           <form className="field-review-form" onSubmit={handleAddReview}>
             <h4>Add Review</h4>
 
+            {reviewSuccess && (
+              <div style={{
+                padding: "10px 14px",
+                background: "#f0fdf4",
+                border: "1px solid #bbf7d0",
+                borderRadius: 8,
+                color: "#15803d",
+                fontSize: 13,
+                marginBottom: 12,
+              }}>
+                ✓ Review submitted successfully!
+              </div>
+            )}
+            
+            {reviewError && (
+              <div style={{
+                padding: "10px 14px",
+                background: "#fef2f2",
+                border: "1px solid #fecaca",
+                borderRadius: 8,
+                color: "#dc2626",
+                fontSize: 13,
+                marginBottom: 12,
+              }}>
+                {reviewError}
+              </div>
+            )}
+
             <label>
               Rating
               <select
                 value={reviewRating}
                 onChange={(e) => setReviewRating(Number(e.target.value))}
+                disabled={submittingReview}
               >
                 {[5,4,3,2,1].map((r) => <option key={r}>{r}</option>)}
               </select>
@@ -273,28 +344,19 @@ export default function FieldDetails() {
                 rows={3}
                 value={reviewComment}
                 onChange={(e) => setReviewComment(e.target.value)}
+                disabled={submittingReview}
+                placeholder="Share your experience..."
               />
             </label>
 
             <button
               type="submit"
-              disabled={!reviewComment.trim()}
+              disabled={!reviewComment.trim() || submittingReview}
               className="field-review-submit"
             >
-              Submit Review
+              {submittingReview ? "Submitting..." : "Submit Review"}
             </button>
           </form>
-        </section>
-
-        {/* MAP */}
-        <section className="field-section">
-          <h2>Location map</h2>
-          {location ? (
-            <div className="field-map-placeholder">
-              Map integration soon <br />
-              {location.lat}, {location.lng}
-            </div>
-          ) : <p>No coordinates yet</p>}
         </section>
       </div>
     </div>

@@ -1,22 +1,138 @@
 // backend/controllers/fieldController.js
+import mongoose from "mongoose";
+import fs from "fs";
+import path from "path";
 import Field from "../models/Field.js";
 
-/**
- * GET /api/fields/search
- *
- * Query params المدعومة:
- *  - sport
- *  - city
- *  - min (min pricePerHour)
- *  - max (max pricePerHour)
- *  - minRating
- *  - isIndoor ("true" | "false")
- *  - surfaceType
- *  - amenities ( "Parking,Lights" أو amenities=Parking&amenities=Lights )
- *  - owner (partial match on owner.name)
- *  - sortBy ("relevance" | "price_low" | "price_high" | "rating")
- *  - date, time (مستقبلاً للـ availability – هلق بس pass-through)
- */
+/* =========================================================
+   CREATE FIELD (PDR 2.3 Phase 1 - Field Management)
+========================================================= */
+export const createField = async (req, res) => {
+  try {
+    const {
+      ownerId,
+      name,
+      description,
+      sportType,
+      pricePerHour,
+      // Legacy fields (optional for Phase 1)
+      sport,
+      city,
+      area,
+      address,
+      currency,
+      isIndoor,
+      surfaceType,
+      maxPlayers,
+      amenities,
+      rules,
+      openingHours,
+      location,
+      images,
+      mainImage,
+      allowedDurations, // PDR 2.3 - Added to fix ReferenceError
+    } = req.body;
+
+    // PDR 2.3 Phase 1 validation - only required fields
+    if (!ownerId || !name || !sportType || pricePerHour === undefined || pricePerHour === null) {
+      return res.status(400).json({
+        message: "ownerId, name, sportType and pricePerHour are required",
+      });
+    }
+
+    // Validate pricePerHour is a number
+    const price = Number(pricePerHour);
+    if (isNaN(price) || price < 0) {
+      return res.status(400).json({
+        message: "pricePerHour must be a valid positive number",
+      });
+    }
+
+    // Parse location coordinates (convert strings to numbers)
+    let parsedLocation = null;
+    if (location && (location.lat || location.lng)) {
+      const lat = parseFloat(location.lat);
+      const lng = parseFloat(location.lng);
+      // Only set location if both coordinates are valid numbers
+      if (!isNaN(lat) && !isNaN(lng)) {
+        parsedLocation = { lat, lng };
+      }
+    }
+
+    const field = await Field.create({
+      owner: ownerId,
+      name,
+      description: description || "",
+      sportType, // PDR 2.3 Phase 1
+      sport: sportType || sport, // Backward compatibility
+      pricePerHour: price,
+      // Optional legacy fields
+      city: city || "",
+      area: area || "",
+      address: address || "",
+      currency: currency || "USD",
+      isIndoor: Boolean(isIndoor),
+      surfaceType: surfaceType || "",
+      maxPlayers: maxPlayers || null,
+      amenities: amenities || [],
+      rules: rules || [],
+      openingHours: openingHours || { open: "08:00", close: "23:00" },
+      location: parsedLocation,
+      images: images || [],
+      mainImage: mainImage || "",
+      allowedDurations: allowedDurations || [1, 1.5, 2, 3],
+      blockedDates: [],
+      blockedTimeSlots: [],
+      isActive: true, // Explicitly set to ensure visibility in Discover
+    });
+
+    res.status(201).json({
+      message: "Field created successfully",
+      field,
+    });
+  } catch (err) {
+    console.error("Create Field Error:", err.message);
+    res.status(500).json({
+      message: "Server error while creating field",
+    });
+  }
+};
+
+/* =========================================================
+   GET FIELDS BY OWNER (PDR 2.3 Phase 1)
+========================================================= */
+export const getFieldsByOwner = async (req, res) => {
+  try {
+    const { ownerId } = req.query;
+
+    if (!ownerId) {
+      return res.status(400).json({
+        message: "ownerId query parameter is required",
+      });
+    }
+
+    // Convert ownerId to ObjectId for proper querying
+    const ownerObjectId = new mongoose.Types.ObjectId(ownerId);
+
+    const fields = await Field.find({ owner: ownerObjectId })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json({
+      count: fields.length,
+      fields,
+    });
+  } catch (err) {
+    console.error("Error fetching owner fields:", err);
+    res.status(500).json({
+      message: "Server error while fetching fields",
+    });
+  }
+};
+
+/* =========================================================
+   SEARCH FIELDS
+========================================================= */
 export const searchFields = async (req, res) => {
   try {
     const {
@@ -30,24 +146,21 @@ export const searchFields = async (req, res) => {
       amenities,
       owner,
       sortBy,
-      date, // not used yet
-      time, // not used yet
+      date,
+      time,
     } = req.query;
 
-    const query = {};
+    const query = { isActive: true }; // Only show active fields to public
 
-    // sport / city
     if (sport) query.sport = sport;
     if (city) query.city = city;
 
-    // pricePerHour range
     if (min || max) {
       query.pricePerHour = {};
       if (min) query.pricePerHour.$gte = Number(min);
       if (max) query.pricePerHour.$lte = Number(max);
     }
 
-    // rating
     if (minRating) {
       const r = Number(minRating);
       if (!isNaN(r) && r > 0) {
@@ -55,40 +168,24 @@ export const searchFields = async (req, res) => {
       }
     }
 
-    // indoor / outdoor
     if (isIndoor === "true") query.isIndoor = true;
     if (isIndoor === "false") query.isIndoor = false;
 
-    // surface type
     if (surfaceType) query.surfaceType = surfaceType;
 
-    // owner (partial match, case-insensitive)
-    if (owner && owner.trim() !== "") {
-      query["owner.name"] = { $regex: owner.trim(), $options: "i" };
-    }
-
-    // amenities (array or comma-separated)
     let amenitiesArr = [];
     if (amenities) {
       if (Array.isArray(amenities)) {
-        amenitiesArr = amenities
-          .flatMap((a) => String(a).split(","))
-          .map((a) => a.trim())
-          .filter(Boolean);
+        amenitiesArr = amenities.flatMap((a) => String(a).split(","));
       } else {
-        amenitiesArr = String(amenities)
-          .split(",")
-          .map((a) => a.trim())
-          .filter(Boolean);
+        amenitiesArr = String(amenities).split(",");
       }
-
+      amenitiesArr = amenitiesArr.map((a) => a.trim()).filter(Boolean);
       if (amenitiesArr.length > 0) {
-        // require all selected amenities to be present
         query.amenities = { $all: amenitiesArr };
       }
     }
 
-    // sorting
     let sortOption = {};
     switch (sortBy) {
       case "price_low":
@@ -98,38 +195,33 @@ export const searchFields = async (req, res) => {
         sortOption = { pricePerHour: -1 };
         break;
       case "rating":
-        sortOption = { averageRating: -1, reviewCount: -1 };
-        break;
-      case "relevance":
       default:
-        // "relevance" = أعلى rating + أكثر reviews
         sortOption = { averageRating: -1, reviewCount: -1 };
-        break;
     }
 
     const fields = await Field.find(query).sort(sortOption).lean();
 
-    // ما منقص ولا حقل من الـ PDR – lean() بيرجع كل الداتا كما هي
     res.json({
       results: fields.length,
       fields,
     });
   } catch (err) {
-    console.error("Error searching fields:", err);
-    res.status(500).json({
-      message: "Server error while searching fields",
-    });
+    console.error("Search Fields Error:", err.message);
+    res.status(500).json({ message: "Server error while searching fields" });
   }
 };
 
-/**
- * GET /api/fields/:id
- * يرجّع كل الـ PDR field كامل (name, images, owner, openingHours, إلخ...)
- */
+/* =========================================================
+   GET FIELD BY ID
+========================================================= */
 export const getFieldById = async (req, res) => {
   try {
     const field = await Field.findById(req.params.id).lean();
     if (!field) {
+      return res.status(404).json({ message: "Field not found" });
+    }
+    // Block public access to inactive fields
+    if (field.isActive === false) {
       return res.status(404).json({ message: "Field not found" });
     }
     res.json(field);
@@ -139,25 +231,28 @@ export const getFieldById = async (req, res) => {
   }
 };
 
-/**
- * POST /api/fields/:id/reviews
- * body: { rating, comment, user }
- * يضيف review جديد ويحدّث:
- *  - reviews[]
- *  - reviewCount
- *  - averageRating
- */
+/* =========================================================
+   REVIEWS
+========================================================= */
 export const addFieldReview = async (req, res) => {
   try {
     const { id } = req.params;
-    const { rating, comment, user } = req.body;
+    const { rating, comment, user, userName } = req.body;
+
+    // Support both 'user' and 'userName' for backward compatibility
+    const reviewerName = userName || user || "Anonymous";
 
     const numericRating = Number(rating);
-
     if (!numericRating || numericRating < 1 || numericRating > 5) {
-      return res
-        .status(400)
-        .json({ message: "Rating must be a number between 1 and 5" });
+      return res.status(400).json({
+        message: "Rating must be between 1 and 5",
+      });
+    }
+
+    if (!comment || !comment.trim()) {
+      return res.status(400).json({
+        message: "Comment is required",
+      });
     }
 
     const field = await Field.findById(id);
@@ -165,31 +260,25 @@ export const addFieldReview = async (req, res) => {
       return res.status(404).json({ message: "Field not found" });
     }
 
-    const review = {
+    // Use 'userName' to match the schema
+    field.reviews.push({
       rating: numericRating,
-      comment: comment || "",
-      user: user || "Anonymous",
+      comment: comment.trim(),
+      userName: reviewerName,
       createdAt: new Date(),
-    };
+    });
 
-    if (!Array.isArray(field.reviews)) {
-      field.reviews = [];
-    }
-
-    field.reviews.push(review);
     field.reviewCount = field.reviews.length;
-
-    // تحديث averageRating
-    const total = field.reviews.reduce((sum, r) => sum + (r.rating || 0), 0);
-    field.averageRating = total / field.reviews.length;
+    field.averageRating =
+      field.reviews.reduce((s, r) => s + r.rating, 0) / field.reviewCount;
 
     await field.save();
 
     res.status(201).json({
       message: "Review added successfully",
-      fieldId: field._id,
       averageRating: field.averageRating,
       reviewCount: field.reviewCount,
+      review: field.reviews[field.reviews.length - 1], // Return the new review
     });
   } catch (err) {
     console.error("Error adding review:", err);
@@ -197,10 +286,6 @@ export const addFieldReview = async (req, res) => {
   }
 };
 
-/**
- * GET /api/fields/:id/reviews
- * يرجّع reviews[] كما هي (مع count و avg لو حابب تستخدمهم)
- */
 export const getFieldReviews = async (req, res) => {
   try {
     const field = await Field.findById(req.params.id).lean();
@@ -220,122 +305,9 @@ export const getFieldReviews = async (req, res) => {
   }
 };
 
-/**
- * POST /api/fields/seed
- * يضيف شوية ملاعب PDR جاهزين (ما بيمسح القديمين)
- * للاستعمال بس بالتست / التطوير.
- */
 export const seedFields = async (req, res) => {
   try {
-    const sampleFields = [
-      {
-        name: "Beirut Arena - Indoor Football",
-        sport: "Football",
-        city: "Beirut",
-        area: "Downtown",
-        address: "Downtown, Beirut, Lebanon",
-        description: "High quality indoor football court with turf and LED lights.",
-        mainImage: "/images/fields/beirut-arena-main.jpg",
-        images: [
-          "/images/fields/beirut-arena-1.jpg",
-          "/images/fields/beirut-arena-2.jpg",
-        ],
-        pricePerHour: 80,
-        currency: "USD",
-        isIndoor: true,
-        surfaceType: "Turf",
-        maxPlayers: 14,
-        amenities: ["Parking", "Lights", "Showers", "Lockers", "AC"],
-        rules: ["No smoking", "No food on the field"],
-        openingHours: { open: "08:00", close: "23:00" },
-        owner: {
-          name: "Beirut Arena Management",
-          phone: "+961 70 000 111",
-          email: "info@beirutarena.com",
-        },
-        location: { lat: 33.8938, lng: 35.5018 },
-        averageRating: 4.7,
-        reviewCount: 2,
-        reviews: [
-          {
-            rating: 5,
-            comment: "Amazing pitch and lights!",
-            user: "Ali",
-            createdAt: new Date(),
-          },
-          {
-            rating: 4.5,
-            comment: "Great staff and clean showers.",
-            user: "Sara",
-            createdAt: new Date(),
-          },
-        ],
-      },
-      {
-        name: "Saida Seaside Court",
-        sport: "Basketball",
-        city: "Sidon",
-        area: "Corniche",
-        address: "Corniche Saida, Lebanon",
-        description: "Outdoor basketball court with sea view.",
-        mainImage: "/images/fields/saida-court-main.jpg",
-        images: [],
-        pricePerHour: 40,
-        currency: "USD",
-        isIndoor: false,
-        surfaceType: "Hardwood",
-        maxPlayers: 10,
-        amenities: ["Lights", "Parking"],
-        rules: ["No glass bottles", "Respect neighborhood"],
-        openingHours: { open: "09:00", close: "22:00" },
-        owner: {
-          name: "Saida Sports Club",
-          phone: "+961 71 222 333",
-          email: "contact@saidasports.com",
-        },
-        location: { lat: 33.5599, lng: 35.3756 },
-        averageRating: 4.3,
-        reviewCount: 1,
-        reviews: [
-          {
-            rating: 4.3,
-            comment: "Nice court with a great view!",
-            user: "Bilal",
-            createdAt: new Date(),
-          },
-        ],
-      },
-      {
-        name: "Jounieh Padel Center",
-        sport: "Padel",
-        city: "Jounieh",
-        area: "Main Road",
-        address: "Jounieh Highway, Lebanon",
-        description: "Modern padel courts with pro equipment.",
-        mainImage: "/images/fields/jounieh-padel-main.jpg",
-        images: [],
-        pricePerHour: 60,
-        currency: "USD",
-        isIndoor: false,
-        surfaceType: "Turf",
-        maxPlayers: 4,
-        amenities: ["Parking", "Lights", "Lockers"],
-        rules: ["Padel shoes only"],
-        openingHours: { open: "07:00", close: "00:00" },
-        owner: {
-          name: "Jounieh Padel Club",
-          phone: "+961 76 555 444",
-          email: "padel@jouniehclub.com",
-        },
-        location: { lat: 33.9801, lng: 35.6154 },
-        averageRating: 0,
-        reviewCount: 0,
-        reviews: [],
-      },
-    ];
-
-    const created = await Field.insertMany(sampleFields);
-
+    const created = await Field.insertMany([]);
     res.status(201).json({
       message: "Fields seeded successfully",
       count: created.length,
@@ -346,15 +318,280 @@ export const seedFields = async (req, res) => {
   }
 };
 
-// (اختياري) لو بدك تستخدمهم بمكان تاني:
-export const getFields = async (req, res) => {
+/* =========================================================
+   UPDATE FIELD (PDR 2.3 Phase 2 - Authorization)
+   Note: authorizeFieldOwner middleware ensures req.field is set
+========================================================= */
+export const updateField = async (req, res) => {
   try {
-    const fields = await Field.find().lean();
-    res.json(fields);
+    // Field is already verified and attached by authorizeFieldOwner middleware
+    const field = req.field;
+
+    const {
+      name,
+      description,
+      sportType,
+      pricePerHour,
+      city,
+      area,
+      address,
+      currency,
+      isIndoor,
+      surfaceType,
+      maxPlayers,
+      amenities,
+      rules,
+      openingHours,
+      location,
+      allowedDurations,
+      blockedDates,
+      blockedTimeSlots,
+    } = req.body;
+
+    // Update allowed fields
+    if (name !== undefined) field.name = name;
+    if (description !== undefined) field.description = description;
+    if (sportType !== undefined) {
+      field.sportType = sportType;
+      field.sport = sportType; // Backward compatibility
+    }
+    if (pricePerHour !== undefined) {
+      const price = Number(pricePerHour);
+      if (isNaN(price) || price < 0) {
+        return res.status(400).json({
+          message: "pricePerHour must be a valid positive number",
+        });
+      }
+      field.pricePerHour = price;
+    }
+    if (city !== undefined) field.city = city;
+    if (area !== undefined) field.area = area;
+    if (address !== undefined) field.address = address;
+    if (currency !== undefined) field.currency = currency;
+    if (isIndoor !== undefined) field.isIndoor = Boolean(isIndoor);
+    if (surfaceType !== undefined) field.surfaceType = surfaceType;
+    if (maxPlayers !== undefined) field.maxPlayers = maxPlayers;
+    if (amenities !== undefined) field.amenities = amenities;
+    if (rules !== undefined) field.rules = rules;
+    if (openingHours !== undefined) field.openingHours = openingHours;
+    
+    // Parse location coordinates (convert strings to numbers)
+    if (location !== undefined) {
+      if (location && (location.lat || location.lng)) {
+        const lat = parseFloat(location.lat);
+        const lng = parseFloat(location.lng);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          field.location = { lat, lng };
+        } else {
+          field.location = null;
+        }
+      } else {
+        field.location = null;
+      }
+    }
+    if (allowedDurations !== undefined) {
+      // Validate allowedDurations is an array of numbers
+      if (Array.isArray(allowedDurations)) {
+        field.allowedDurations = allowedDurations.filter(d => !isNaN(Number(d)) && Number(d) > 0).map(d => Number(d));
+      }
+    }
+    if (blockedDates !== undefined) {
+      field.blockedDates = Array.isArray(blockedDates) ? blockedDates : [];
+    }
+    if (blockedTimeSlots !== undefined) {
+      field.blockedTimeSlots = Array.isArray(blockedTimeSlots) ? blockedTimeSlots : [];
+    }
+
+    await field.save();
+
+    res.json({
+      message: "Field updated successfully",
+      field,
+    });
   } catch (err) {
-    console.error("Error fetching fields:", err);
-    res.status(500).json({ message: "Server error while fetching fields" });
+    console.error("Update Field Error:", err);
+    res.status(500).json({
+      message: "Server error while updating field",
+    });
   }
 };
 
-// ممكن لو حابب تضيف create/update/delete لاحقاً بنفس الـ pattern.
+/* =========================================================
+   UPLOAD FIELD IMAGES (PDR 2.3 Phase 2 - Authorization)
+   Note: authorizeFieldOwner middleware ensures req.field is set
+========================================================= */
+export const uploadFieldImages = async (req, res) => {
+  try {
+    // Field is already verified and attached by authorizeFieldOwner middleware
+    const field = req.field;
+
+    // Handle file uploads (req.files is an array when using upload.array())
+    const uploadedFiles = req.files || [];
+    
+    if (uploadedFiles.length === 0) {
+      return res.status(400).json({
+        message: "No images provided",
+      });
+    }
+
+    // Extract file paths (normalize path separators for URLs)
+    const imagePaths = uploadedFiles.map((file) => file.path.replace(/\\/g, "/"));
+
+    // Append new images to existing ones
+    field.images = [...(field.images || []), ...imagePaths];
+
+    // Set first image as mainImage if mainImage is not set
+    if (!field.mainImage && field.images.length > 0) {
+      field.mainImage = field.images[0];
+    }
+
+    await field.save();
+
+    res.json({
+      message: "Images uploaded successfully",
+      field: {
+        _id: field._id,
+        mainImage: field.mainImage,
+        images: field.images,
+      },
+    });
+  } catch (err) {
+    console.error("Upload Images Error:", err);
+    res.status(500).json({
+      message: "Server error while uploading images",
+    });
+  }
+};
+
+/* =========================================================
+   GET FIELD IMAGES (PDR 2.3 Phase 2)
+========================================================= */
+export const getFieldImages = async (req, res) => {
+  try {
+    const field = await Field.findById(req.params.id).select("mainImage images").lean();
+    
+    if (!field) {
+      return res.status(404).json({ message: "Field not found" });
+    }
+
+    res.json({
+      fieldId: field._id,
+      mainImage: field.mainImage || null,
+      images: field.images || [],
+    });
+  } catch (err) {
+    console.error("Get Field Images Error:", err);
+    res.status(500).json({
+      message: "Server error while fetching images",
+    });
+  }
+};
+
+/* =========================================================
+   DELETE FIELD IMAGE (PDR 2.3 Phase 2 - Authorization)
+   Note: authorizeFieldOwner middleware ensures req.field is set
+========================================================= */
+export const deleteFieldImage = async (req, res) => {
+  try {
+    // Field is already verified and attached by authorizeFieldOwner middleware
+    const field = req.field;
+    const { imagePath } = req.body;
+
+    if (!imagePath) {
+      return res.status(400).json({
+        message: "imagePath is required",
+      });
+    }
+
+    // Remove image from images array
+    field.images = (field.images || []).filter((img) => img !== imagePath);
+
+    // If deleted image was mainImage, set first remaining image as mainImage
+    if (field.mainImage === imagePath) {
+      field.mainImage = field.images.length > 0 ? field.images[0] : null;
+    }
+
+    await field.save();
+
+    // Try to delete the actual file from disk
+    try {
+      const filePath = path.resolve(imagePath);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    } catch (fileErr) {
+      // Silent fail - file may not exist
+    }
+
+    res.json({
+      message: "Image deleted successfully",
+      field: {
+        _id: field._id,
+        mainImage: field.mainImage,
+        images: field.images,
+      },
+    });
+  } catch (err) {
+    console.error("Delete Field Image Error:", err);
+    res.status(500).json({
+      message: "Server error while deleting image",
+    });
+  }
+};
+
+/* =========================================================
+   ACTIVATE FIELD (PDR 2.3 Phase 2 - Authorization)
+   Note: authorizeFieldOwner middleware ensures req.field is set
+========================================================= */
+export const activateField = async (req, res) => {
+  try {
+    // Field is already verified and attached by authorizeFieldOwner middleware
+    const field = req.field;
+
+    field.isActive = true;
+    await field.save();
+
+    res.json({
+      message: "Field activated successfully",
+      field: {
+        _id: field._id,
+        name: field.name,
+        isActive: field.isActive,
+      },
+    });
+  } catch (err) {
+    console.error("Activate Field Error:", err);
+    res.status(500).json({
+      message: "Server error while activating field",
+    });
+  }
+};
+
+/* =========================================================
+   DEACTIVATE FIELD (PDR 2.3 Phase 2 - Authorization)
+   Note: authorizeFieldOwner middleware ensures req.field is set
+========================================================= */
+export const deactivateField = async (req, res) => {
+  try {
+    // Field is already verified and attached by authorizeFieldOwner middleware
+    const field = req.field;
+
+    field.isActive = false;
+    await field.save();
+
+    res.json({
+      message: "Field deactivated successfully",
+      field: {
+        _id: field._id,
+        name: field.name,
+        isActive: field.isActive,
+      },
+    });
+  } catch (err) {
+    console.error("Deactivate Field Error:", err);
+    res.status(500).json({
+      message: "Server error while deactivating field",
+    });
+  }
+};
+

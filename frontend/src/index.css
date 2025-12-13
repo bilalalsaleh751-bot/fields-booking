@@ -12,6 +12,26 @@ body {
     sans-serif;
   background: #ffffff;
   color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* --- GLOBAL INPUT STYLES --- */
+input,
+select,
+textarea {
+  font-family: inherit;
+  color: #111827;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #6b7280;
+}
+
+select option {
+  color: #111827;
+  background: #ffffff;
 }
 
 .app-root {

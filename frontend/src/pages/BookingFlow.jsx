@@ -34,24 +34,88 @@ function formatTimeLabel(time24) {
   return `${h}:${minutes} ${suffix}`;
 }
 
-// تقريب المدة إلى عدد slots (نستخدم تقريب للأقرب مثل الـ backend)
-function getRoundedDurationSlots(duration) {
-  const num = Number(duration) || 1;
-  return Math.max(1, Math.round(num));
+// Calculate end time based on start time and duration
+function getEndTime(startTime24, durationHours) {
+  if (!startTime24) return "";
+  const [hourStr, minuteStr = "0"] = startTime24.split(":");
+  const startMinutes = parseInt(hourStr, 10) * 60 + parseInt(minuteStr, 10);
+  const endMinutes = startMinutes + (durationHours * 60);
+  const endHour = Math.floor(endMinutes / 60);
+  const endMin = endMinutes % 60;
+  return `${String(endHour).padStart(2, "0")}:${String(endMin).padStart(2, "0")}`;
 }
 
-// هل ممكن نبدأ من slot معيّن بهيدي المدة بدون ما ندعس على أوقات محجوزة؟
-function canFitDurationAtTime(slots, startTime, durationSlots) {
-  const idx = slots.findIndex((s) => s.time === startTime);
-  if (idx === -1) return false;
+// Format time range (start → end)
+function formatTimeRange(startTime24, durationHours) {
+  if (!startTime24) return "";
+  const endTime24 = getEndTime(startTime24, durationHours);
+  return `${formatTimeLabel(startTime24)} → ${formatTimeLabel(endTime24)}`;
+}
 
-  for (let i = 0; i < durationSlots; i++) {
-    const s = slots[idx + i];
-    if (!s || s.isBooked) {
-      return false;
+// Convert time string "HH:MM" to minutes since midnight
+function timeToMinutes(timeStr) {
+  if (!timeStr) return 0;
+  const [h, m = "0"] = timeStr.split(":");
+  return parseInt(h, 10) * 60 + parseInt(m, 10);
+}
+
+// Check if two time ranges overlap
+// Range: [start, end) - start inclusive, end exclusive
+// But for start time validation, we use <= to block end boundaries
+function rangesOverlap(startA, endA, startB, endB) {
+  return startA <= endB && startB < endA;
+}
+
+// Calculate number of hourly slots needed for a duration
+function getRoundedDurationSlots(duration) {
+  const num = Number(duration) || 1;
+  return Math.max(1, Math.ceil(num));
+}
+
+/**
+ * Check if a start time S can fit a booking of given duration
+ * WITHOUT overlapping any booked/blocked slots.
+ * 
+ * EACH START TIME IS EVALUATED INDEPENDENTLY.
+ * Does NOT filter based on any "current selection".
+ * 
+ * Logic: Check if range [S, S + duration) overlaps any booked/blocked range.
+ * 
+ * @param {Array} slots - Array of slot objects with {time, isBooked, isBlocked}
+ * @param {string} startTime - The start time to check (e.g., "09:00")
+ * @param {number} durationHours - Duration in hours (e.g., 2 for 2h)
+ * @returns {boolean} True if the time range fits without overlapping
+ */
+function canFitDurationAtTime(slots, startTime, durationHours) {
+  // Calculate the time range for this potential booking
+  const rangeStart = timeToMinutes(startTime);
+  const rangeEnd = rangeStart + (durationHours * 60);
+  
+  // Check if this range overlaps with ANY booked or blocked slot
+  for (const slot of slots) {
+    // Skip available slots
+    if (!slot.isBooked && !slot.isBlocked) continue;
+    
+    // Calculate the blocked slot's time range (each slot = 1 hour)
+    const slotStart = timeToMinutes(slot.time);
+    const slotEnd = slotStart + 60;
+    
+    // Check overlap: our range vs blocked slot range
+    if (rangesOverlap(rangeStart, rangeEnd, slotStart, slotEnd)) {
+      return false; // Overlap found - this start time doesn't fit
     }
   }
-  return true;
+  
+  // Also check if the range extends beyond available slots
+  const lastSlot = slots[slots.length - 1];
+  if (lastSlot) {
+    const lastSlotEnd = timeToMinutes(lastSlot.time) + 60;
+    if (rangeEnd > lastSlotEnd) {
+      return false; // Range extends past closing time
+    }
+  }
+  
+  return true; // No overlaps found - start time is valid
 }
 
 export default function BookingFlow() {
@@ -219,13 +283,13 @@ export default function BookingFlow() {
     }
   }, [form.time, form.duration, dayHours.closeHour]);
 
-  // هل اليوم FULL (كل الـ slots محجوزة)؟
+  // هل اليوم FULL (كل الـ slots محجوزة أو محظورة)؟
   const isDayFullyBooked =
     form.date &&
     !slotsLoading &&
     !slotsError &&
     slots.length > 0 &&
-    slots.every((s) => s.isBooked);
+    slots.every((s) => s.isBooked || s.isBlocked);
 
   // Next step
   const goNext = () => {
@@ -263,15 +327,14 @@ export default function BookingFlow() {
         return setError("Please pick a time from the available slots.");
       }
 
-      const durationSlots = getRoundedDurationSlots(form.duration);
-
-      // لازم الوقت يكون من الـ slots + غير محجوز + بيكفي للمدة
+      // لازم الوقت يكون من الـ slots + غير محجوز أو محظور + بيكفي للمدة
       const chosenSlot = slots.find((s) => s.time === form.time);
-      if (!chosenSlot || chosenSlot.isBooked) {
+      if (!chosenSlot || chosenSlot.isBooked || chosenSlot.isBlocked) {
         return setError("Please pick a valid available time.");
       }
 
-      const fits = canFitDurationAtTime(slots, form.time, durationSlots);
+      const durationHours = parseFloat(form.duration) || 1;
+      const fits = canFitDurationAtTime(slots, form.time, durationHours);
       if (!fits) {
         return setError(
           "This time does not have enough free hours for the selected duration."
@@ -600,19 +663,19 @@ export default function BookingFlow() {
                 !isDayFullyBooked && (
                   <div className="booking-options-grid booking-slots-grid">
                     {slots.map((slot) => {
-                      const durationSlots = getRoundedDurationSlots(
-                        form.duration
-                      );
+                      // Duration in hours (can be fractional: 1, 1.5, 2, etc.)
+                      const durationHours = parseFloat(form.duration) || 1;
 
-                      // هل هذا الوقت يقدر يخد المدة المختارة؟
+                      // Check if this start time can fit the duration
+                      // Each start time is evaluated INDEPENDENTLY
                       const fitsForDuration = canFitDurationAtTime(
                         slots,
                         slot.time,
-                        durationSlots
+                        durationHours
                       );
 
-                      const disabled =
-                        slot.isBooked || !fitsForDuration;
+                      const isUnavailable = slot.isBooked || slot.isBlocked;
+                      const disabled = isUnavailable || !fitsForDuration;
 
                       return (
                         <button
@@ -624,8 +687,8 @@ export default function BookingFlow() {
                           }
                           className={[
                             "booking-slot-btn",
-                            slot.isBooked ? "booked" : "available",
-                            !slot.isBooked && !fitsForDuration
+                            isUnavailable ? "booked" : "available",
+                            !isUnavailable && !fitsForDuration
                               ? "not-enough-time"
                               : "",
                             form.time === slot.time ? "selected" : "",
@@ -633,7 +696,9 @@ export default function BookingFlow() {
                         >
                           <span>{formatTimeLabel(slot.time)}</span>
                           <small>
-                            {slot.isBooked
+                            {slot.isBlocked
+                              ? "Unavailable"
+                              : slot.isBooked
                               ? "Booked"
                               : fitsForDuration
                               ? "Available"
@@ -728,16 +793,24 @@ export default function BookingFlow() {
               </div>
 
               <div className="booking-review-row">
-                <span>Date & Time</span>
+                <span>Date</span>
+                <strong>{form.date}</strong>
+              </div>
+
+              <div className="booking-review-row">
+                <span>Time Slot</span>
                 <strong>
-                  {form.date}{" "}
-                  {form.time && `at ${formatTimeLabel(form.time)}`}
+                  {form.time && form.duration
+                    ? formatTimeRange(form.time, Number(form.duration))
+                    : form.time
+                    ? formatTimeLabel(form.time)
+                    : "-"}
                 </strong>
               </div>
 
               <div className="booking-review-row">
                 <span>Duration</span>
-                <strong>{form.duration} hour(s)</strong>
+                <strong>{form.duration} hour{Number(form.duration) !== 1 ? "s" : ""}</strong>
               </div>
 
               <div className="booking-review-row">

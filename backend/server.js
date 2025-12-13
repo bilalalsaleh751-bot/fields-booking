@@ -1,30 +1,43 @@
-// backend/server.js
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import fs from "fs";
 import connectDB from "./config/db.js";
 
 import fieldRoutes from "./routes/fieldRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import availabilityRoutes from "./routes/availabilityRoutes.js";
+import ownerRoutes from "./routes/ownerRoutes.js";
 
 dotenv.config();
 connectDB();
+
+// Ensure uploads folder exists
+if (!fs.existsSync("uploads")) {
+  fs.mkdirSync("uploads", { recursive: true });
+  console.log("📁 Created uploads folder");
+}
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Serve static files from uploads directory
+app.use("/uploads", express.static("uploads"));
+
 // FIELD ROUTES
 app.use("/api/fields", fieldRoutes);
-app.use("/api/fields", availabilityRoutes); // IMPORTANT: /api/fields/:fieldId/availability
+app.use("/api/fields", availabilityRoutes);
 
 // BOOKING ROUTES
 app.use("/api/bookings", bookingRoutes);
 
 // USER ROUTES
 app.use("/api/users", userRoutes);
+
+// OWNER ROUTES
+app.use("/api/owner", ownerRoutes);
 
 app.get("/", (req, res) => {
   res.send("API is running...");
