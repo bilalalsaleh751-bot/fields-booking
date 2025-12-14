@@ -4,6 +4,7 @@ import Booking from "../models/Booking.js";
 import Field from "../models/Field.js";
 import {
   timeToMinutes,
+  minutesToTime,
   timeRangesOverlap,
   getBookingRange,
   isValidTimeFormat,
@@ -144,12 +145,18 @@ export const createBooking = async (req, res) => {
 
       // ============================================================
       // CREATE BOOKING (within transaction)
+      // Store as explicit time range: startTime + endTime
       // ============================================================
       
       const totalPrice = (field.pricePerHour || 0) * durationNum;
       
       // Normalize start time to hour boundary for consistency
       const normalizedStartTime = normalizeToHour(startTime);
+      
+      // Calculate explicit end time from start + duration
+      const startMinutes = timeToMinutes(normalizedStartTime);
+      const endMinutes = startMinutes + (durationNum * 60);
+      const calculatedEndTime = minutesToTime(endMinutes);
 
       const [booking] = await Booking.create([{
         field: fieldId,
@@ -158,6 +165,7 @@ export const createBooking = async (req, res) => {
         userPhone,
         date,
         startTime: normalizedStartTime,
+        endTime: calculatedEndTime, // Explicit end time for clarity
         duration: durationNum,
         totalPrice,
         status: "pending",
@@ -261,6 +269,13 @@ export const seedBookings = async (req, res) => {
       return `${String(hour).padStart(2, "0")}:00`;
     };
 
+    // Helper: Calculate end time from start time and duration
+    const calculateEndTime = (startTime, duration) => {
+      const startHour = parseInt(startTime.split(":")[0], 10);
+      const endHour = startHour + Math.ceil(duration);
+      return `${String(endHour).padStart(2, "0")}:00`;
+    };
+
     // Sample user data
     const sampleUsers = [
       { name: "Ahmed Ali", email: "ahmed.ali@example.com", phone: "+961 3 123456" },
@@ -286,6 +301,7 @@ export const seedBookings = async (req, res) => {
         const user = sampleUsers[Math.floor(Math.random() * sampleUsers.length)];
         const duration = [1, 1.5, 2, 2.5, 3][Math.floor(Math.random() * 5)];
         const startTime = getRandomTime(openHour, closeHour - Math.ceil(duration));
+        const endTime = calculateEndTime(startTime, duration);
         const totalPrice = field.pricePerHour * duration;
 
         bookingsToCreate.push({
@@ -295,6 +311,7 @@ export const seedBookings = async (req, res) => {
           userPhone: user.phone,
           date: formatDate(now),
           startTime,
+          endTime,
           duration,
           totalPrice: Math.round(totalPrice * 100) / 100,
           status: "confirmed",
@@ -311,6 +328,7 @@ export const seedBookings = async (req, res) => {
           const user = sampleUsers[Math.floor(Math.random() * sampleUsers.length)];
           const duration = [1, 1.5, 2, 2.5, 3][Math.floor(Math.random() * 5)];
           const startTime = getRandomTime(openHour, closeHour - Math.ceil(duration));
+          const endTime = calculateEndTime(startTime, duration);
           const totalPrice = field.pricePerHour * duration;
           const status = Math.random() > 0.3 ? "confirmed" : "pending"; // 70% confirmed, 30% pending
 
@@ -321,6 +339,7 @@ export const seedBookings = async (req, res) => {
             userPhone: user.phone,
             date: formatDate(date),
             startTime,
+            endTime,
             duration,
             totalPrice: Math.round(totalPrice * 100) / 100,
             status,
@@ -338,6 +357,7 @@ export const seedBookings = async (req, res) => {
           const user = sampleUsers[Math.floor(Math.random() * sampleUsers.length)];
           const duration = [1, 1.5, 2, 2.5, 3][Math.floor(Math.random() * 5)];
           const startTime = getRandomTime(openHour, closeHour - Math.ceil(duration));
+          const endTime = calculateEndTime(startTime, duration);
           const totalPrice = field.pricePerHour * duration;
           const status = Math.random() > 0.15 ? "confirmed" : "cancelled"; // 85% confirmed, 15% cancelled
 
@@ -348,6 +368,7 @@ export const seedBookings = async (req, res) => {
             userPhone: user.phone,
             date: formatDate(date),
             startTime,
+            endTime,
             duration,
             totalPrice: Math.round(totalPrice * 100) / 100,
             status,
@@ -370,6 +391,7 @@ export const seedBookings = async (req, res) => {
         const user = sampleUsers[Math.floor(Math.random() * sampleUsers.length)];
         const duration = [1, 1.5, 2, 2.5, 3][Math.floor(Math.random() * 5)];
         const startTime = getRandomTime(openHour, closeHour - Math.ceil(duration));
+        const endTime = calculateEndTime(startTime, duration);
         const totalPrice = field.pricePerHour * duration;
 
         bookingsToCreate.push({
@@ -379,6 +401,7 @@ export const seedBookings = async (req, res) => {
           userPhone: user.phone,
           date: formatDate(date),
           startTime,
+          endTime,
           duration,
           totalPrice: Math.round(totalPrice * 100) / 100,
           status: "confirmed", // All last month bookings are confirmed

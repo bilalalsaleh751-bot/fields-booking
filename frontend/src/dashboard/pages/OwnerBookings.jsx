@@ -1,19 +1,21 @@
 // src/dashboard/pages/OwnerBookings.jsx
-import { useEffect, useState, useCallback } from "react";
+// PDR 2.4 - Booking Management (Step 2: Actions)
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import DashboardHeader from "../components/DashboardHeader";
 import "../dashboard.css";
 
 function OwnerBookings() {
   const location = useLocation();
-  
+
   const [ownerName, setOwnerName] = useState("");
   const [ownerId, setOwnerId] = useState("");
 
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("all"); // all, confirmed, pending, cancelled
+  const [activeTab, setActiveTab] = useState("upcoming"); // upcoming, past, cancelled
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     const storedName = localStorage.getItem("ownerName");
@@ -28,7 +30,6 @@ function OwnerBookings() {
     try {
       setLoading(true);
       const queryParams = new URLSearchParams({ ownerId });
-      if (filter !== "all") queryParams.append("status", filter);
 
       const res = await fetch(
         `http://localhost:5000/api/owner/bookings?${queryParams}`
@@ -38,50 +39,119 @@ function OwnerBookings() {
     } finally {
       setLoading(false);
     }
-  }, [ownerId, filter]);
+  }, [ownerId]);
 
-  // Fetch bookings on mount, filter change, and when navigating back
+  // Fetch bookings on mount and when navigating back
   useEffect(() => {
     fetchBookings();
   }, [fetchBookings, location.key]);
 
-  const getToken = () => {
-    return localStorage.getItem("ownerToken") || "";
-  };
+  // Filter bookings by category
+  const filteredBookings = useMemo(() => {
+    return bookings.filter((b) => b.category === activeTab);
+  }, [bookings, activeTab]);
 
-  const handleStatusUpdate = async (bookingId, newStatus) => {
-    if (!confirm(`Are you sure you want to ${newStatus === "cancelled" ? "cancel" : "mark as completed"} this booking?`)) {
+  // Count bookings by category
+  const counts = useMemo(() => {
+    return {
+      upcoming: bookings.filter((b) => b.category === "upcoming").length,
+      past: bookings.filter((b) => b.category === "past").length,
+      cancelled: bookings.filter((b) => b.category === "cancelled").length,
+    };
+  }, [bookings]);
+
+  // Handle booking action (complete or cancel)
+  const handleBookingAction = async (bookingId, action) => {
+    const actionLabel = action === "complete" ? "mark as completed" : "cancel";
+    
+    if (!window.confirm(`Are you sure you want to ${actionLabel} this booking?`)) {
       return;
     }
 
+    setActionLoading(true);
     try {
-      const token = getToken();
       const res = await fetch(
         `http://localhost:5000/api/owner/bookings/${bookingId}/status`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${localStorage.getItem("ownerToken") || ""}`,
           },
-          body: JSON.stringify({
-            ownerId,
-            status: newStatus,
-          }),
+          body: JSON.stringify({ ownerId, action }),
         }
       );
 
+      const data = await res.json();
+
       if (res.ok) {
-        fetchBookings();
-        setSelectedBooking(null);
+        // Update booking in state immediately
+        setBookings((prev) =>
+          prev.map((b) =>
+            b._id === bookingId
+              ? {
+                  ...b,
+                  status: data.booking.status,
+                  paymentStatus: data.booking.paymentStatus,
+                  category: data.booking.category,
+                  canComplete: false,
+                  canCancel: false,
+                }
+              : b
+          )
+        );
+        
+        // Close modal if open
+        if (selectedBooking?._id === bookingId) {
+          setSelectedBooking(null);
+        }
       } else {
-        const error = await res.json();
-        alert(error.message || "Failed to update booking");
+        alert(data.message || `Failed to ${actionLabel} booking`);
       }
     } catch (err) {
-      console.error("Update error:", err);
-      alert("Error updating booking");
+      console.error("Action error:", err);
+      alert(`Error: Could not ${actionLabel} booking`);
+    } finally {
+      setActionLoading(false);
     }
+  };
+
+  // Format payment status for display
+  const getPaymentStatusBadge = (paymentStatus) => {
+    const styles = {
+      paid: { background: "#dcfce7", color: "#166534" },
+      pending: { background: "#fef3c7", color: "#92400e" },
+      refunded: { background: "#fee2e2", color: "#991b1b" },
+    };
+    return (
+      <span
+        style={{
+          padding: "4px 10px",
+          borderRadius: "12px",
+          fontSize: "11px",
+          fontWeight: 600,
+          textTransform: "capitalize",
+          ...(styles[paymentStatus] || styles.pending),
+        }}
+      >
+        {paymentStatus}
+      </span>
+    );
+  };
+
+  // Format booking status for display
+  const getStatusBadge = (status) => {
+    const classMap = {
+      confirmed: "badge-success",
+      completed: "badge-success",
+      pending: "badge-warning",
+      cancelled: "badge-danger",
+    };
+    return (
+      <span className={`badge ${classMap[status] || "badge-secondary"}`}>
+        {status}
+      </span>
+    );
   };
 
   return (
@@ -89,46 +159,97 @@ function OwnerBookings() {
       <DashboardHeader ownerName={ownerName} />
 
       <div style={{ padding: 0 }}>
-        {/* Filters */}
+        {/* Header with Tabs */}
         <div className="dashboard-panel" style={{ marginBottom: 24 }}>
           <div className="dashboard-panel-header">
             <div>
               <h2 className="dashboard-panel-title">Bookings</h2>
-              <p className="dashboard-panel-subtitle">Manage all bookings for your fields</p>
+              <p className="dashboard-panel-subtitle">
+                Manage all bookings for your fields
+              </p>
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-            {["all", "confirmed", "pending", "cancelled"].map((status) => (
+          {/* Category Tabs */}
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              marginTop: 20,
+              borderBottom: "1px solid #e2e8f0",
+              paddingBottom: 0,
+            }}
+          >
+            {[
+              { key: "upcoming", label: "Upcoming", count: counts.upcoming },
+              { key: "past", label: "Past", count: counts.past },
+              { key: "cancelled", label: "Cancelled", count: counts.cancelled },
+            ].map((tab) => (
               <button
-                key={status}
-                onClick={() => setFilter(status)}
-                className="dashboard-date-pill"
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
                 style={{
-                  background: filter === status ? "#22c55e" : "white",
-                  color: filter === status ? "white" : "#475569",
-                  borderColor: filter === status ? "#22c55e" : "#e2e8f0",
+                  padding: "12px 20px",
+                  fontSize: 14,
+                  fontWeight: 500,
+                  background: "transparent",
+                  border: "none",
+                  borderBottom:
+                    activeTab === tab.key
+                      ? "2px solid #3b82f6"
+                      : "2px solid transparent",
+                  color: activeTab === tab.key ? "#3b82f6" : "#64748b",
+                  cursor: "pointer",
+                  marginBottom: -1,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
                 }}
               >
-                {status.charAt(0).toUpperCase() + status.slice(1)}
+                {tab.label}
+                <span
+                  style={{
+                    background: activeTab === tab.key ? "#3b82f6" : "#e2e8f0",
+                    color: activeTab === tab.key ? "white" : "#64748b",
+                    padding: "2px 8px",
+                    borderRadius: 10,
+                    fontSize: 12,
+                    fontWeight: 600,
+                  }}
+                >
+                  {tab.count}
+                </span>
               </button>
             ))}
           </div>
         </div>
 
+        {/* Loading State */}
         {loading && (
           <div className="dashboard-panel">
             <p className="dashboard-loading">Loading bookings…</p>
           </div>
         )}
 
-        {!loading && bookings.length === 0 && (
-          <div className="dashboard-panel">
-            <p className="dashboard-empty">No bookings found.</p>
+        {/* Empty State */}
+        {!loading && filteredBookings.length === 0 && (
+          <div className="dashboard-panel" style={{ textAlign: "center", padding: 48 }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>📅</div>
+            <h3 style={{ margin: 0, color: "#334155", fontWeight: 600 }}>
+              No {activeTab} bookings
+            </h3>
+            <p style={{ color: "#64748b", marginTop: 8 }}>
+              {activeTab === "upcoming"
+                ? "You don't have any upcoming bookings yet."
+                : activeTab === "past"
+                ? "No past bookings to display."
+                : "No cancelled bookings."}
+            </p>
           </div>
         )}
 
-        {!loading && bookings.length > 0 && (
+        {/* Bookings Table */}
+        {!loading && filteredBookings.length > 0 && (
           <div className="dashboard-panel">
             <table className="dashboard-table">
               <thead>
@@ -136,19 +257,28 @@ function OwnerBookings() {
                   <th>Booking ID</th>
                   <th>Field</th>
                   <th>Customer</th>
-                  <th>Date & Time</th>
+                  <th>Date</th>
+                  <th>Time</th>
                   <th>Duration</th>
-                  <th>Price</th>
                   <th>Status</th>
-                  <th>Actions</th>
+                  <th>Payment</th>
+                  <th style={{ textAlign: "center" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {bookings.map((b) => (
+                {filteredBookings.map((b) => (
                   <tr key={b._id}>
                     <td>
-                      <code style={{ fontSize: 11, color: "#64748b" }}>
-                        {b.bookingCode}
+                      <code
+                        style={{
+                          fontSize: 12,
+                          color: "#475569",
+                          background: "#f1f5f9",
+                          padding: "4px 8px",
+                          borderRadius: 4,
+                        }}
+                      >
+                        #{b.bookingCode}
                       </code>
                     </td>
                     <td>
@@ -163,70 +293,72 @@ function OwnerBookings() {
                     </td>
                     <td>
                       <div>
-                        <div style={{ fontWeight: 500 }}>{b.customerName}</div>
-                        <div style={{ fontSize: 12, color: "#64748b" }}>
-                          {b.customerEmail}
+                        <div style={{ fontWeight: 500, color: "#1e293b" }}>
+                          {b.customerName}
                         </div>
                       </div>
                     </td>
                     <td>
-                      <div style={{ fontWeight: 500 }}>{b.dateFormatted}</div>
-                      <div style={{ fontSize: 12, color: "#64748b" }}>
+                      <div style={{ fontWeight: 500, color: "#1e293b" }}>
+                        {b.dateFormatted}
+                      </div>
+                    </td>
+                    <td>
+                      <div style={{ fontSize: 13, color: "#475569" }}>
                         {b.timeRange}
                       </div>
                     </td>
-                    <td>{b.duration}h</td>
-                    <td style={{ fontWeight: 600 }}>
-                      ${b.totalPrice.toFixed(2)}
-                    </td>
                     <td>
-                      <span
-                        className={
-                          "badge " +
-                          (b.status === "confirmed"
-                            ? "badge-success"
-                            : b.status === "pending"
-                            ? "badge-warning"
-                            : "badge-danger")
-                        }
-                      >
-                        {b.status}
-                      </span>
+                      <span style={{ color: "#475569" }}>{b.duration}h</span>
                     </td>
+                    <td>{getStatusBadge(b.status)}</td>
+                    <td>{getPaymentStatusBadge(b.paymentStatus)}</td>
                     <td>
-                      <div style={{ display: "flex", gap: 6 }}>
+                      <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
                         <button
                           onClick={() => setSelectedBooking(b)}
-                          className="dashboard-date-pill"
-                          style={{ fontSize: 11, padding: "4px 8px" }}
+                          className="dashboard-secondary-btn"
+                          style={{ padding: "6px 12px", fontSize: 12 }}
                         >
                           View
                         </button>
-                        {b.status === "pending" && (
+                        
+                        {/* Complete button - only for active bookings after end time */}
+                        {b.canComplete && (
                           <button
-                            onClick={() => handleStatusUpdate(b._id, "confirmed")}
-                            className="dashboard-date-pill"
+                            onClick={() => handleBookingAction(b._id, "complete")}
+                            disabled={actionLoading}
                             style={{
-                              fontSize: 11,
-                              padding: "4px 8px",
+                              padding: "6px 12px",
+                              fontSize: 12,
+                              borderRadius: 8,
+                              border: "none",
                               background: "#22c55e",
                               color: "white",
-                              borderColor: "#22c55e",
+                              fontWeight: 500,
+                              cursor: actionLoading ? "not-allowed" : "pointer",
+                              opacity: actionLoading ? 0.6 : 1,
                             }}
                           >
                             Complete
                           </button>
                         )}
-                        {b.status === "confirmed" && (
+                        
+                        {/* Cancel button - only for active bookings */}
+                        {b.canCancel && (
                           <button
-                            onClick={() => handleStatusUpdate(b._id, "cancelled")}
-                            className="dashboard-date-pill"
+                            onClick={() => handleBookingAction(b._id, "cancel")}
+                            disabled={actionLoading}
                             style={{
-                              fontSize: 11,
-                              padding: "4px 8px",
-                              background: "#ef4444",
-                              color: "white",
-                              borderColor: "#ef4444",
+                              padding: "6px 12px",
+                              fontSize: 12,
+                              borderRadius: 8,
+                              border: "1px solid #ef4444",
+                              background: "white",
+                              color: "#ef4444",
+                              fontWeight: 500,
+                              cursor: actionLoading ? "not-allowed" : "pointer",
+                              opacity: actionLoading ? 0.6 : 1,
                             }}
                           >
                             Cancel
@@ -250,153 +382,369 @@ function OwnerBookings() {
               left: 0,
               right: 0,
               bottom: 0,
-              background: "rgba(0, 0, 0, 0.5)",
+              background: "rgba(15, 23, 42, 0.6)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               zIndex: 1000,
+              backdropFilter: "blur(4px)",
             }}
             onClick={() => setSelectedBooking(null)}
           >
             <div
               className="dashboard-panel"
               style={{
-                maxWidth: 600,
+                maxWidth: 560,
                 width: "90%",
                 maxHeight: "90vh",
                 overflow: "auto",
+                margin: 0,
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="dashboard-panel-header">
+              {/* Modal Header */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  marginBottom: 24,
+                  paddingBottom: 16,
+                  borderBottom: "1px solid #e2e8f0",
+                }}
+              >
                 <div>
-                  <h2 className="dashboard-panel-title">Booking Details</h2>
-                  <p className="dashboard-panel-subtitle">
-                    Booking ID: {selectedBooking.bookingCode}
+                  <h2
+                    style={{
+                      margin: 0,
+                      fontSize: 18,
+                      fontWeight: 600,
+                      color: "#0f172a",
+                    }}
+                  >
+                    Booking Details
+                  </h2>
+                  <p
+                    style={{
+                      margin: "4px 0 0",
+                      fontSize: 13,
+                      color: "#64748b",
+                    }}
+                  >
+                    Booking #{selectedBooking.bookingCode}
                   </p>
                 </div>
                 <button
                   onClick={() => setSelectedBooking(null)}
                   style={{
-                    background: "none",
+                    background: "#f1f5f9",
                     border: "none",
-                    fontSize: 24,
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    fontSize: 18,
                     cursor: "pointer",
                     color: "#64748b",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
                 >
                   ×
                 </button>
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                <div>
-                  <label style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>
-                    Field
-                  </label>
-                  <div style={{ marginTop: 4, fontSize: 14, fontWeight: 500 }}>
-                    {selectedBooking.fieldName} ({selectedBooking.fieldSport})
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>
-                    Customer
-                  </label>
-                  <div style={{ marginTop: 4 }}>
-                    <div style={{ fontSize: 14, fontWeight: 500 }}>
-                      {selectedBooking.customerName}
-                    </div>
-                    <div style={{ fontSize: 13, color: "#64748b" }}>
-                      {selectedBooking.customerEmail}
-                    </div>
-                    <div style={{ fontSize: 13, color: "#64748b" }}>
-                      {selectedBooking.customerPhone}
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>
-                    Date & Time
-                  </label>
-                  <div style={{ marginTop: 4, fontSize: 14 }}>
-                    {selectedBooking.dateFormatted}
-                  </div>
-                  <div style={{ fontSize: 13, color: "#64748b" }}>
-                    {selectedBooking.timeRange}
-                  </div>
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
-                  <div>
-                    <label style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>
-                      Duration
-                    </label>
-                    <div style={{ marginTop: 4, fontSize: 14 }}>
-                      {selectedBooking.duration} hours
-                    </div>
-                  </div>
-                  <div>
-                    <label style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>
-                      Total Price
-                    </label>
-                    <div style={{ marginTop: 4, fontSize: 14, fontWeight: 600 }}>
-                      ${selectedBooking.totalPrice.toFixed(2)}
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>
+              {/* Booking Status */}
+              <div
+                style={{
+                  display: "flex",
+                  gap: 12,
+                  marginBottom: 24,
+                }}
+              >
+                <div
+                  style={{
+                    flex: 1,
+                    padding: 16,
+                    background: "#f8fafc",
+                    borderRadius: 12,
+                    textAlign: "center",
+                  }}
+                >
+                  <div
+                    style={{ fontSize: 11, color: "#64748b", marginBottom: 6 }}
+                  >
                     Status
-                  </label>
-                  <div style={{ marginTop: 4 }}>
-                    <span
-                      className={
-                        "badge " +
-                        (selectedBooking.status === "confirmed"
-                          ? "badge-success"
-                          : selectedBooking.status === "pending"
-                          ? "badge-warning"
-                          : "badge-danger")
-                      }
-                    >
-                      {selectedBooking.status}
-                    </span>
                   </div>
+                  {getStatusBadge(selectedBooking.status)}
                 </div>
-
-                <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
-                  {selectedBooking.status === "pending" && (
-                    <button
-                      onClick={() => handleStatusUpdate(selectedBooking._id, "confirmed")}
-                      className="dashboard-primary-btn"
-                      style={{ flex: 1 }}
-                    >
-                      Mark as Completed
-                    </button>
-                  )}
-                  {selectedBooking.status === "confirmed" && (
-                    <button
-                      onClick={() => handleStatusUpdate(selectedBooking._id, "cancelled")}
-                      style={{
-                        flex: 1,
-                        padding: "10px 20px",
-                        borderRadius: "10px",
-                        border: "1px solid #ef4444",
-                        background: "white",
-                        color: "#ef4444",
-                        fontSize: "13px",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                      }}
-                    >
-                      Cancel Booking
-                    </button>
-                  )}
+                <div
+                  style={{
+                    flex: 1,
+                    padding: 16,
+                    background: "#f8fafc",
+                    borderRadius: 12,
+                    textAlign: "center",
+                  }}
+                >
+                  <div
+                    style={{ fontSize: 11, color: "#64748b", marginBottom: 6 }}
+                  >
+                    Payment
+                  </div>
+                  {getPaymentStatusBadge(selectedBooking.paymentStatus)}
+                </div>
+                <div
+                  style={{
+                    flex: 1,
+                    padding: 16,
+                    background: "#f8fafc",
+                    borderRadius: 12,
+                    textAlign: "center",
+                  }}
+                >
+                  <div
+                    style={{ fontSize: 11, color: "#64748b", marginBottom: 6 }}
+                  >
+                    Total
+                  </div>
+                  <div style={{ fontWeight: 700, color: "#0f172a", fontSize: 16 }}>
+                    ${selectedBooking.totalPrice.toFixed(2)}
+                  </div>
                 </div>
               </div>
+
+              {/* Field Info */}
+              <div style={{ marginBottom: 20 }}>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: "#64748b",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.5px",
+                    marginBottom: 8,
+                  }}
+                >
+                  Field
+                </div>
+                <div
+                  style={{
+                    background: "#f8fafc",
+                    borderRadius: 12,
+                    padding: 16,
+                  }}
+                >
+                  <div
+                    style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}
+                  >
+                    {selectedBooking.fieldName}
+                  </div>
+                  <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>
+                    {selectedBooking.fieldSport}
+                  </div>
+                </div>
+              </div>
+
+              {/* Customer Info */}
+              <div style={{ marginBottom: 20 }}>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: "#64748b",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.5px",
+                    marginBottom: 8,
+                  }}
+                >
+                  Customer
+                </div>
+                <div
+                  style={{
+                    background: "#f8fafc",
+                    borderRadius: 12,
+                    padding: 16,
+                  }}
+                >
+                  <div
+                    style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}
+                  >
+                    {selectedBooking.customerName}
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 4,
+                      marginTop: 8,
+                    }}
+                  >
+                    <div style={{ fontSize: 13, color: "#475569" }}>
+                      📧 {selectedBooking.customerEmail}
+                    </div>
+                    <div style={{ fontSize: 13, color: "#475569" }}>
+                      📱 {selectedBooking.customerPhone}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Date & Time */}
+              <div style={{ marginBottom: 20 }}>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: "#64748b",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.5px",
+                    marginBottom: 8,
+                  }}
+                >
+                  Date & Time
+                </div>
+                <div
+                  style={{
+                    background: "#f8fafc",
+                    borderRadius: 12,
+                    padding: 16,
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 16,
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: 12, color: "#64748b" }}>Date</div>
+                    <div
+                      style={{
+                        fontSize: 15,
+                        fontWeight: 600,
+                        color: "#0f172a",
+                        marginTop: 4,
+                      }}
+                    >
+                      {selectedBooking.dateFormatted}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: "#64748b" }}>Time</div>
+                    <div
+                      style={{
+                        fontSize: 15,
+                        fontWeight: 600,
+                        color: "#0f172a",
+                        marginTop: 4,
+                      }}
+                    >
+                      {selectedBooking.timeRange}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: "#64748b" }}>Duration</div>
+                    <div
+                      style={{
+                        fontSize: 15,
+                        fontWeight: 600,
+                        color: "#0f172a",
+                        marginTop: 4,
+                      }}
+                    >
+                      {selectedBooking.duration} hour
+                      {selectedBooking.duration !== 1 ? "s" : ""}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
+                {/* Complete button */}
+                {selectedBooking.canComplete && (
+                  <button
+                    onClick={() => handleBookingAction(selectedBooking._id, "complete")}
+                    disabled={actionLoading}
+                    className="dashboard-primary-btn"
+                    style={{
+                      flex: 1,
+                      background: "#22c55e",
+                      opacity: actionLoading ? 0.6 : 1,
+                    }}
+                  >
+                    {actionLoading ? "Processing..." : "Mark as Completed"}
+                  </button>
+                )}
+
+                {/* Cancel button */}
+                {selectedBooking.canCancel && (
+                  <button
+                    onClick={() => handleBookingAction(selectedBooking._id, "cancel")}
+                    disabled={actionLoading}
+                    style={{
+                      flex: 1,
+                      padding: "12px 20px",
+                      borderRadius: 10,
+                      border: "1px solid #ef4444",
+                      background: "white",
+                      color: "#ef4444",
+                      fontSize: 14,
+                      fontWeight: 600,
+                      cursor: actionLoading ? "not-allowed" : "pointer",
+                      opacity: actionLoading ? 0.6 : 1,
+                    }}
+                  >
+                    {actionLoading ? "Processing..." : "Cancel Booking"}
+                  </button>
+                )}
+
+                {/* Close button (always visible) */}
+                {!selectedBooking.canComplete && !selectedBooking.canCancel && (
+                  <button
+                    onClick={() => setSelectedBooking(null)}
+                    className="dashboard-secondary-btn"
+                    style={{ flex: 1 }}
+                  >
+                    Close
+                  </button>
+                )}
+              </div>
+
+              {/* Refund notice for cancelled bookings */}
+              {selectedBooking.status === "cancelled" && (
+                <div
+                  style={{
+                    marginTop: 16,
+                    padding: 12,
+                    background: "#fef2f2",
+                    borderRadius: 8,
+                    border: "1px solid #fecaca",
+                    fontSize: 13,
+                    color: "#991b1b",
+                    textAlign: "center",
+                  }}
+                >
+                  This booking has been cancelled. Payment status:{" "}
+                  <strong>{selectedBooking.paymentStatus}</strong>
+                </div>
+              )}
+
+              {/* Completed notice */}
+              {selectedBooking.status === "completed" && (
+                <div
+                  style={{
+                    marginTop: 16,
+                    padding: 12,
+                    background: "#f0fdf4",
+                    borderRadius: 8,
+                    border: "1px solid #bbf7d0",
+                    fontSize: 13,
+                    color: "#166534",
+                    textAlign: "center",
+                  }}
+                >
+                  ✓ This booking has been completed successfully
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -406,4 +754,3 @@ function OwnerBookings() {
 }
 
 export default OwnerBookings;
-

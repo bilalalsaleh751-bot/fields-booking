@@ -68,7 +68,7 @@ function OwnerFields() {
   const [ownerId, setOwnerId] = useState("");
   const [fields, setFields] = useState([]);
   const [loadingFields, setLoadingFields] = useState(true);
-  
+
   // Unified mode: "list" | "create" | "edit"
   const [mode, setMode] = useState("list");
   const [editingFieldId, setEditingFieldId] = useState(null);
@@ -404,8 +404,8 @@ function OwnerFields() {
   // RENDER: LIST MODE
   // ============================================
   if (mode === "list") {
-    return (
-      <>
+  return (
+    <>
         <DashboardHeader ownerName={ownerName} onAddField={handleAddNew} />
 
         {loadingFields && (
@@ -698,7 +698,7 @@ function OwnerFields() {
               <div>
                 <label style={labelStyle}>Amenities</label>
                 <div style={{ display: "flex", gap: 8, marginTop: 6, marginBottom: 8 }}>
-                  <input
+              <input
                     id="formAmenity"
                     style={{ ...inputStyle, flex: 1 }}
                     placeholder="e.g., Parking, Floodlights"
@@ -743,7 +743,7 @@ function OwnerFields() {
               <div>
                 <label style={labelStyle}>Rules</label>
                 <div style={{ display: "flex", gap: 8, marginTop: 6, marginBottom: 8 }}>
-                  <input
+              <input
                     id="formRule"
                     style={{ ...inputStyle, flex: 1 }}
                     placeholder="e.g., No smoking"
@@ -873,8 +873,8 @@ function OwnerFields() {
                   </span>
                   <span style={{ fontSize: 12, color: "#d97706" }}>Blocked Slots</span>
                 </div>
-              </div>
-              
+            </div>
+
               {/* Open Calendar Button */}
               <button
                 type="button"

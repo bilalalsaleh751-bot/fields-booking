@@ -48,9 +48,11 @@ export const getOwnerDashboardOverview = async (req, res) => {
       });
     }
 
-    // 2) Total Bookings
+    // 2) Total Bookings (PDR-compliant: exclude cancelled bookings)
+    // Count only active/completed bookings for visibility
     const totalBookings = await Booking.countDocuments({
       field: { $in: fieldIds },
+      status: { $ne: "cancelled" }, // Exclude cancelled bookings
     });
 
     // 3) Active fields (will be fixed later with isActive)
@@ -78,9 +80,10 @@ export const getOwnerDashboardOverview = async (req, res) => {
       59
     );
 
+    // Upcoming today: Include pending and confirmed (not cancelled/completed)
     const allTodayBookings = await Booking.find({
       field: { $in: fieldIds },
-      status: "confirmed",
+      status: { $in: ["pending", "confirmed"] }, // Active bookings only
     }).populate("field", "name city sport");
 
     const upcomingTodayList = allTodayBookings.filter((b) => {
@@ -121,6 +124,16 @@ export const getOwnerDashboardOverview = async (req, res) => {
       }
     };
 
+    // Helper: Get payment status based on booking status
+    const getPaymentStatus = (status) => {
+      switch (status) {
+        case "completed": return "paid";
+        case "confirmed": return "paid";
+        case "cancelled": return "refunded";
+        default: return "pending";
+      }
+    };
+
     const upcomingBookings = upcomingTodayList
       .sort(
         (a, b) =>
@@ -137,7 +150,7 @@ export const getOwnerDashboardOverview = async (req, res) => {
         dateFormatted: formatDate(b.date),
         time: b.startTime,
         timeRange: formatTimeRange(b.startTime, b.duration),
-        paymentStatus: b.status === "confirmed" ? "paid" : "pending",
+        paymentStatus: getPaymentStatus(b.status),
         status: b.status,
       }));
 
@@ -163,40 +176,58 @@ export const getOwnerDashboardOverview = async (req, res) => {
       59
     );
 
-    const monthlyBookings = await Booking.find({
-      field: { $in: fieldIds },
-      status: "confirmed",
-    });
+    // ============================================================
+    // EARNINGS CALCULATION (PDR-COMPLIANT)
+    // 
+    // RULE: Earnings are ONLY calculated from COMPLETED bookings
+    // - Pending bookings: No earnings (not yet confirmed)
+    // - Confirmed bookings: No earnings (not yet completed)
+    // - Completed bookings: Count towards earnings
+    // - Cancelled bookings: No earnings (refunded)
+    // ============================================================
 
     let totalEarningsThisMonth = 0;
     let totalEarningsLastMonth = 0;
-    let paidBookings = 0;
-    let pendingPayments = 0;
-    let refunded = 0;
+    let completedBookings = 0;  // Bookings that contribute to earnings
+    let confirmedBookings = 0;  // Confirmed but not yet completed
+    let pendingBookings = 0;    // Awaiting confirmation
+    let cancelledBookings = 0;  // Cancelled (refunded)
 
-    // Get all bookings for counting (not just confirmed)
+    // Get all bookings for counting
     const allBookings = await Booking.find({
       field: { $in: fieldIds },
     });
 
     allBookings.forEach((b) => {
       const d = buildDateObject(b.date, b.startTime);
+      if (!d) return; // Skip invalid dates
       
-      // This month data
+      // Count by status for this month
       if (d >= startOfMonth && d <= endOfMonth) {
-        if (b.status === "confirmed") {
-          totalEarningsThisMonth += b.totalPrice;
-          paidBookings++;
-        } else if (b.status === "pending") {
-          pendingPayments++;
-        } else if (b.status === "cancelled") {
-          refunded++;
+        switch (b.status) {
+          case "completed":
+            // ONLY completed bookings count towards earnings
+            totalEarningsThisMonth += b.totalPrice || 0;
+            completedBookings++;
+            break;
+          case "confirmed":
+            // Confirmed but not completed - no earnings yet
+            confirmedBookings++;
+            break;
+          case "pending":
+            // Pending - no earnings
+            pendingBookings++;
+            break;
+          case "cancelled":
+            // Cancelled - refunded, no earnings
+            cancelledBookings++;
+            break;
         }
       }
       
-      // Last month earnings (only confirmed)
-      if (d >= startOfLastMonth && d <= endOfLastMonth && b.status === "confirmed") {
-        totalEarningsLastMonth += b.totalPrice;
+      // Last month earnings (ONLY completed bookings)
+      if (d >= startOfLastMonth && d <= endOfLastMonth && b.status === "completed") {
+        totalEarningsLastMonth += b.totalPrice || 0;
       }
     });
 
@@ -227,16 +258,27 @@ export const getOwnerDashboardOverview = async (req, res) => {
       },
       upcomingBookings,
       financial: {
+        // Earnings (from completed bookings only)
         totalEarningsThisMonth,
         thisMonthEarnings: totalEarningsThisMonth, // Alias for frontend
         lastMonthEarnings: totalEarningsLastMonth,
+        
+        // Commission calculation
         commission,
         platformCommission: commission, // Alias for frontend
         netToOwner,
         commissionRate: commissionRate, // Keep as decimal (0.15)
-        paidBookings,
-        pendingPayments,
-        refunded,
+        
+        // Booking counts by status (this month)
+        completedBookings,   // Earnings-generating bookings
+        confirmedBookings,   // Confirmed but not completed
+        pendingBookings,     // Awaiting confirmation
+        cancelledBookings,   // Refunded
+        
+        // Legacy aliases for backward compatibility
+        paidBookings: completedBookings,
+        pendingPayments: pendingBookings,
+        refunded: cancelledBookings,
       },
       reviews,
     });

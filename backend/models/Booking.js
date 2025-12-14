@@ -19,8 +19,20 @@ const bookingSchema = new mongoose.Schema(
       index: true, // Index for date queries
     },
 
+    // ============================================================
+    // TIME RANGE MODEL (FINALIZED)
+    // Bookings are stored as explicit time ranges for clarity
+    // startTime: When booking begins (inclusive)
+    // endTime: When booking ends (exclusive)
+    // duration: For display/reference only
+    // ============================================================
     startTime: {
       type: String, // "HH:00" format (normalized to hour)
+      required: true,
+    },
+
+    endTime: {
+      type: String, // "HH:00" format - calculated from startTime + duration
       required: true,
     },
 
@@ -39,7 +51,7 @@ const bookingSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["pending", "confirmed", "cancelled"],
+      enum: ["pending", "confirmed", "completed", "cancelled"],
       default: "pending",
       index: true, // Index for status filtering
     },

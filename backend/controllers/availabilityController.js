@@ -70,9 +70,20 @@ export const getFieldAvailability = async (req, res) => {
     });
 
     // Build list of occupied time ranges from bookings
+    // Uses explicit endTime if available, otherwise calculates from duration
     const bookedRanges = bookings
       .filter(b => b.startTime)
-      .map(booking => getBookingRange(booking.startTime, booking.duration));
+      .map(booking => {
+        // Prefer explicit endTime for accuracy
+        if (booking.endTime) {
+          return {
+            start: timeToMinutes(booking.startTime),
+            end: timeToMinutes(booking.endTime)
+          };
+        }
+        // Fallback to calculation from duration
+        return getBookingRange(booking.startTime, booking.duration);
+      });
 
     // Build list of blocked time ranges (30-min each for owner flexibility)
     const blockedRanges = blockedTimeSlots.map(blockedTime => {

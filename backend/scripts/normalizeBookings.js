@@ -91,8 +91,9 @@ async function normalizeBookings() {
           duration = 1;
         }
 
-        // 4. Calculate end time (for reference)
+        // 4. Calculate end time (explicit storage for range-based model)
         const endMin = normalizedStartMin + (duration * 60);
+        const calculatedEndTime = minutesToTime(endMin);
 
         // 5. Update if needed
         let needsUpdate = false;
@@ -108,6 +109,13 @@ async function normalizeBookings() {
           updates.duration = duration;
           needsUpdate = true;
           console.log(`  📝 Normalizing duration: "${booking.duration}" → "${duration}"`);
+        }
+
+        // 6. Add endTime if missing (required for new booking model)
+        if (!booking.endTime || booking.endTime !== calculatedEndTime) {
+          updates.endTime = calculatedEndTime;
+          needsUpdate = true;
+          console.log(`  📝 Adding/updating endTime: "${booking.endTime || 'missing'}" → "${calculatedEndTime}"`);
         }
 
         if (needsUpdate) {
