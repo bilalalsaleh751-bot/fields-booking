@@ -23,6 +23,20 @@ import {
   respondToReview,
 } from "../controllers/ownerReviewController.js";
 
+import {
+  getOwnerSettings,
+  updateOwnerProfile,
+  changeOwnerPassword,
+  updateOwnerBusiness,
+  updateOwnerNotifications,
+} from "../controllers/ownerSettingsController.js";
+
+import {
+  getOwnerNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+} from "../controllers/notificationController.js";
+
 const router = express.Router();
 
 const upload = multer({ dest: "uploads/" });
@@ -68,5 +82,21 @@ router.put("/bookings/:bookingId/status", updateBookingStatus);
 // ===============================
 router.get("/reviews", getOwnerReviews);
 router.post("/reviews/respond", respondToReview);
+
+// ===============================
+// 📌 OWNER SETTINGS (PDR)
+// ===============================
+router.get("/settings", getOwnerSettings);
+router.put("/settings/profile/:ownerId", updateOwnerProfile);
+router.put("/settings/password/:ownerId", changeOwnerPassword);
+router.put("/settings/business/:ownerId", updateOwnerBusiness);
+router.put("/settings/notifications/:ownerId", updateOwnerNotifications);
+
+// ===============================
+// 📌 NOTIFICATIONS (PDR)
+// ===============================
+router.get("/notifications", getOwnerNotifications);
+router.put("/notifications/:notificationId/read", markNotificationRead);
+router.put("/notifications/read-all", markAllNotificationsRead);
 
 export default router;

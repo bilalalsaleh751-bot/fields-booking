@@ -2,6 +2,9 @@
 import mongoose from "mongoose";
 import Booking from "../models/Booking.js";
 import Field from "../models/Field.js";
+import Transaction from "../models/Transaction.js";
+import PlatformSettings from "../models/PlatformSettings.js";
+import { createNotification } from "./notificationController.js";
 
 // Helper: Convert date + time → Date object
 function buildDateObject(dateStr, timeStr) {
@@ -96,13 +99,28 @@ const isBookingEnded = (booking) => {
     
     const [endH, endM = "0"] = endTime.split(":").map(Number);
     
-    const bookingEndDateTime = new Date(booking.date);
+    // Parse date string properly to avoid timezone issues
+    // booking.date is "YYYY-MM-DD" format
+    const dateStr = booking.date;
+    if (!dateStr) {
+      // No date, assume booking has ended
+      return true;
+    }
+    
+    // Parse date parts manually to ensure local timezone
+    const [year, month, day] = dateStr.split("-").map(Number);
+    if (!year || !month || !day) {
+      // Invalid date format, assume booking has ended
+      return true;
+    }
+    
+    // Create date in LOCAL timezone (month is 0-indexed)
+    const bookingEndDateTime = new Date(year, month - 1, day, endH || 0, endM || 0, 0, 0);
+    
     if (isNaN(bookingEndDateTime.getTime())) {
       // Invalid date, assume booking has ended
       return true;
     }
-    
-    bookingEndDateTime.setHours(endH || 0, endM || 0, 0, 0);
     
     return now >= bookingEndDateTime;
   } catch (err) {
@@ -399,8 +417,8 @@ export const updateBookingStatus = async (req, res) => {
       return res.status(400).json({ message: "action is required" });
     }
 
-    if (!["complete", "cancel"].includes(action)) {
-      return res.status(400).json({ message: "Action must be 'complete' or 'cancel'" });
+    if (!["complete", "cancel", "confirm"].includes(action)) {
+      return res.status(400).json({ message: "Action must be 'complete', 'cancel', or 'confirm'" });
     }
 
     // Validate bookingId format
@@ -447,6 +465,13 @@ export const updateBookingStatus = async (req, res) => {
 
     // Handle COMPLETE action
     if (action === "complete") {
+      // Validate: Can only complete CONFIRMED or PENDING bookings
+      if (booking.status !== "confirmed" && booking.status !== "pending") {
+        return res.status(400).json({ 
+          message: "Only confirmed or pending bookings can be marked as completed" 
+        });
+      }
+      
       // Validate: Can only complete after booking end time
       if (!isBookingEnded(booking)) {
         return res.status(400).json({ 
@@ -455,10 +480,70 @@ export const updateBookingStatus = async (req, res) => {
       }
       
       booking.status = "completed";
+      booking.paymentStatus = "paid";
       await booking.save();
+
+      // Create transaction (idempotent - won't duplicate)
+      const existingTransaction = await Transaction.findOne({ bookingId: booking._id });
+      if (!existingTransaction) {
+        const settings = await PlatformSettings.getSettings();
+        const commissionRate = settings.commissionRate || 15;
+        const commissionAmount = (booking.totalPrice * commissionRate) / 100;
+        const netToOwner = booking.totalPrice - commissionAmount;
+        
+        await Transaction.create({
+          bookingId: booking._id,
+          fieldId: booking.field._id,
+          ownerId: booking.field.owner,
+          userName: booking.userName,
+          userEmail: booking.userEmail,
+          userPhone: booking.userPhone,
+          amountGross: booking.totalPrice,
+          commissionRate,
+          commissionAmount,
+          netToOwner,
+          status: "completed",
+          bookingDate: booking.date,
+          bookingStartTime: booking.startTime,
+          bookingEndTime: booking.endTime,
+          fieldName: booking.field.name,
+        });
+      }
+
+      // Trigger notification for booking completion
+      const fieldName = booking.field?.name || "Field";
+      await createNotification(
+        booking.field.owner,
+        "completed",
+        `Booking completed: ${booking.userName} at ${fieldName} on ${booking.date}`,
+        booking._id,
+        booking.field._id
+      );
 
       return res.json({
         message: "Booking marked as completed successfully",
+        booking: {
+          _id: booking._id,
+          status: booking.status,
+          paymentStatus: getPaymentStatus(booking.status),
+          category: categorizeBooking(booking),
+        },
+      });
+    }
+
+    // Handle CONFIRM action (for pending bookings)
+    if (action === "confirm") {
+      if (booking.status !== "pending") {
+        return res.status(400).json({ 
+          message: "Only pending bookings can be confirmed" 
+        });
+      }
+      
+      booking.status = "confirmed";
+      await booking.save();
+
+      return res.json({
+        message: "Booking confirmed successfully",
         booking: {
           _id: booking._id,
           status: booking.status,
@@ -473,6 +558,16 @@ export const updateBookingStatus = async (req, res) => {
       // Cancel the booking (this frees the time slot for availability)
       booking.status = "cancelled";
       await booking.save();
+
+      // Trigger notification for booking cancellation
+      const fieldName = booking.field?.name || "Field";
+      await createNotification(
+        booking.field.owner,
+        "cancelled",
+        `Booking cancelled: ${booking.userName} at ${fieldName} on ${booking.date}`,
+        booking._id,
+        booking.field._id
+      );
 
       return res.json({
         message: "Booking cancelled successfully. Time slot is now available.",

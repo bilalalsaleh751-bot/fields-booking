@@ -59,6 +59,15 @@ const fieldSchema = new mongoose.Schema(
     reviewCount: { type: Number, default: 0 },
 
     isActive: { type: Boolean, default: true }, // PDR 2.3 Phase 2
+    
+    // Admin approval status (PDR 3.4)
+    approvalStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected", "disabled", "blocked"],
+      default: "pending",
+    },
+    
+    blockReason: String, // Reason if blocked by admin
 
     // Availability blocking (PDR 2.3)
     blockedDates: [{ type: String }], // Array of YYYY-MM-DD dates that are blocked

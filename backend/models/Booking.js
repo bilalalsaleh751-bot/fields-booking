@@ -8,10 +8,24 @@ const bookingSchema = new mongoose.Schema(
       required: true,
       index: true, // Index for field queries
     },
+    
+    // Optional user reference for logged-in customers
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      index: true,
+    },
 
     userName: { type: String, required: true },
     userEmail: { type: String, required: true },
     userPhone: { type: String, required: true },
+    
+    // Review (added by customer after booking is completed)
+    review: {
+      rating: { type: Number, min: 1, max: 5 },
+      comment: String,
+      createdAt: Date,
+    },
 
     date: {
       type: String, // YYYY-MM-DD
@@ -51,10 +65,22 @@ const bookingSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["pending", "confirmed", "completed", "cancelled"],
+      enum: ["pending", "confirmed", "completed", "cancelled", "disputed"],
       default: "pending",
       index: true, // Index for status filtering
     },
+    
+    // Payment status (PDR 3.5)
+    paymentStatus: {
+      type: String,
+      enum: ["unpaid", "paid", "refunded"],
+      default: "unpaid",
+    },
+    
+    // Dispute handling
+    disputeReason: String,
+    disputeResolvedAt: Date,
+    disputeResolution: String,
   },
   { timestamps: true }
 );

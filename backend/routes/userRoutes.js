@@ -1,9 +1,39 @@
 import express from "express";
-import { registerUser, loginUser } from "../controllers/userController.js";
+import { protectUser } from "../middleware/userAuth.js";
+import {
+  registerUser,
+  loginUser,
+  getProfile,
+  updateProfile,
+  getUserBookings,
+  getUserBooking,
+  cancelBooking,
+  addReview,
+  getReceipt,
+} from "../controllers/userController.js";
 
 const router = express.Router();
 
+// ============================================================
+// PUBLIC ROUTES (No auth required)
+// ============================================================
 router.post("/register", registerUser);
 router.post("/login", loginUser);
+
+// ============================================================
+// PROTECTED ROUTES (Require user auth)
+// ============================================================
+router.use(protectUser);
+
+// Profile
+router.get("/profile", getProfile);
+router.put("/profile", updateProfile);
+
+// Bookings
+router.get("/bookings", getUserBookings);
+router.get("/bookings/:id", getUserBooking);
+router.put("/bookings/:id/cancel", cancelBooking);
+router.post("/bookings/:id/review", addReview);
+router.get("/bookings/:id/receipt", getReceipt);
 
 export default router;

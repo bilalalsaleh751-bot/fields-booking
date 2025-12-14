@@ -16,6 +16,13 @@ function OwnerBookings() {
   const [activeTab, setActiveTab] = useState("upcoming"); // upcoming, past, cancelled
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  
+  // Force re-render every minute to update button visibility based on time
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setTick((t) => t + 1), 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const storedName = localStorage.getItem("ownerName");
@@ -60,6 +67,65 @@ function OwnerBookings() {
     };
   }, [bookings]);
 
+  // ============================================================
+  // FRONTEND HELPER: Check if booking can be completed
+  // Rules:
+  // - Status must be "confirmed" OR "pending"
+  // - Booking end time must have passed
+  // - NOT cancelled or already completed
+  // ============================================================
+  const canCompleteBooking = useCallback((booking) => {
+    // Cannot complete cancelled or already completed bookings
+    if (booking.status === "cancelled" || booking.status === "completed") {
+      return false;
+    }
+    
+    // Must be confirmed or pending
+    if (booking.status !== "confirmed" && booking.status !== "pending") {
+      return false;
+    }
+    
+    // Check if booking end time has passed
+    const now = new Date();
+    
+    // Get end time from booking
+    let endTime = booking.endTime;
+    if (!endTime && booking.startTime && booking.duration) {
+      const [startH] = booking.startTime.split(":").map(Number);
+      const endH = startH + Math.ceil(booking.duration);
+      endTime = `${String(endH).padStart(2, "0")}:00`;
+    }
+    
+    if (!endTime) {
+      endTime = booking.startTime || "23:00";
+    }
+    
+    const [endH, endM = "0"] = endTime.split(":").map(Number);
+    
+    // Parse date - handle "YYYY-MM-DD" format
+    const dateStr = booking.date;
+    if (!dateStr) return true; // No date, allow completion
+    
+    const [year, month, day] = dateStr.split("-").map(Number);
+    if (!year || !month || !day) return true; // Invalid date, allow completion
+    
+    // Create date in local timezone (month is 0-indexed)
+    const bookingEndDateTime = new Date(year, month - 1, day, endH || 0, endM || 0, 0, 0);
+    
+    return now >= bookingEndDateTime;
+  }, []);
+
+  // Helper: Check if booking can be cancelled
+  const canCancelBooking = useCallback((booking) => {
+    // Can cancel any pending or confirmed booking
+    return booking.status === "pending" || booking.status === "confirmed";
+  }, []);
+
+  // Helper: Check if booking can be confirmed (pending → confirmed)
+  const canConfirmBooking = useCallback((booking) => {
+    return booking.status === "pending";
+  }, []);
+
   // Handle booking action (complete or cancel)
   const handleBookingAction = async (bookingId, action) => {
     const actionLabel = action === "complete" ? "mark as completed" : "cancel";
@@ -100,6 +166,9 @@ function OwnerBookings() {
               : b
           )
         );
+        
+        // Signal dashboard to refresh on next visit
+        sessionStorage.setItem("dashboardNeedsRefresh", Date.now().toString());
         
         // Close modal if open
         if (selectedBooking?._id === bookingId) {
@@ -323,8 +392,29 @@ function OwnerBookings() {
                           View
                         </button>
                         
-                        {/* Complete button - only for active bookings after end time */}
-                        {b.canComplete && (
+                        {/* Confirm button - only for pending bookings */}
+                        {canConfirmBooking(b) && (
+                          <button
+                            onClick={() => handleBookingAction(b._id, "confirm")}
+                            disabled={actionLoading}
+                            style={{
+                              padding: "6px 12px",
+                              fontSize: 12,
+                              borderRadius: 8,
+                              border: "none",
+                              background: "#3b82f6",
+                              color: "white",
+                              fontWeight: 500,
+                              cursor: actionLoading ? "not-allowed" : "pointer",
+                              opacity: actionLoading ? 0.6 : 1,
+                            }}
+                          >
+                            Confirm
+                          </button>
+                        )}
+                        
+                        {/* Complete button - only for confirmed bookings after end time */}
+                        {canCompleteBooking(b) && (
                           <button
                             onClick={() => handleBookingAction(b._id, "complete")}
                             disabled={actionLoading}
@@ -345,7 +435,7 @@ function OwnerBookings() {
                         )}
                         
                         {/* Cancel button - only for active bookings */}
-                        {b.canCancel && (
+                        {canCancelBooking(b) && (
                           <button
                             onClick={() => handleBookingAction(b._id, "cancel")}
                             disabled={actionLoading}
@@ -659,8 +749,24 @@ function OwnerBookings() {
 
               {/* Action Buttons */}
               <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
+                {/* Confirm button - for pending bookings */}
+                {canConfirmBooking(selectedBooking) && (
+                  <button
+                    onClick={() => handleBookingAction(selectedBooking._id, "confirm")}
+                    disabled={actionLoading}
+                    className="dashboard-primary-btn"
+                    style={{
+                      flex: 1,
+                      background: "#3b82f6",
+                      opacity: actionLoading ? 0.6 : 1,
+                    }}
+                  >
+                    {actionLoading ? "Processing..." : "Confirm Booking"}
+                  </button>
+                )}
+
                 {/* Complete button */}
-                {selectedBooking.canComplete && (
+                {canCompleteBooking(selectedBooking) && (
                   <button
                     onClick={() => handleBookingAction(selectedBooking._id, "complete")}
                     disabled={actionLoading}
@@ -676,7 +782,7 @@ function OwnerBookings() {
                 )}
 
                 {/* Cancel button */}
-                {selectedBooking.canCancel && (
+                {canCancelBooking(selectedBooking) && (
                   <button
                     onClick={() => handleBookingAction(selectedBooking._id, "cancel")}
                     disabled={actionLoading}
@@ -697,8 +803,8 @@ function OwnerBookings() {
                   </button>
                 )}
 
-                {/* Close button (always visible) */}
-                {!selectedBooking.canComplete && !selectedBooking.canCancel && (
+                {/* Close button (always visible when no actions available) */}
+                {!canCompleteBooking(selectedBooking) && !canCancelBooking(selectedBooking) && !canConfirmBooking(selectedBooking) && (
                   <button
                     onClick={() => setSelectedBooking(null)}
                     className="dashboard-secondary-btn"

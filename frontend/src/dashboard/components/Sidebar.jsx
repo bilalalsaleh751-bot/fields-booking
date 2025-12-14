@@ -1,14 +1,16 @@
 // src/dashboard/components/Sidebar.jsx
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 function Sidebar() {
+  const navigate = useNavigate();
   const [ownerName, setOwnerName] = useState("");
 
   useEffect(() => {
     const storedName = localStorage.getItem("ownerName");
     if (storedName) setOwnerName(storedName);
   }, []);
+
   const navItems = [
     { label: "Dashboard", icon: "📊", path: "/owner/dashboard" },
     { label: "Fields", icon: "🏟️", path: "/owner/fields" },
@@ -17,6 +19,13 @@ function Sidebar() {
     { label: "Reviews", icon: "⭐", path: "/owner/reviews" },
     { label: "Settings", icon: "⚙️", path: "/owner/settings" },
   ];
+
+  const handleLogout = () => {
+    localStorage.removeItem("ownerToken");
+    localStorage.removeItem("ownerName");
+    localStorage.removeItem("ownerId");
+    navigate("/");
+  };
 
   return (
     <aside className="dashboard-sidebar">
@@ -53,6 +62,30 @@ function Sidebar() {
           <div className="dashboard-owner-role">Field Owner</div>
         </div>
       </div>
+
+      {/* Logout Button */}
+      <button
+        onClick={handleLogout}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          width: "calc(100% - 32px)",
+          margin: "16px 16px",
+          padding: "12px 16px",
+          borderRadius: 10,
+          border: "1px solid #fecaca",
+          background: "#fef2f2",
+          color: "#dc2626",
+          fontSize: 14,
+          fontWeight: 500,
+          cursor: "pointer",
+          transition: "all 0.2s",
+        }}
+      >
+        <span>🚪</span>
+        <span>Logout</span>
+      </button>
     </aside>
   );
 }

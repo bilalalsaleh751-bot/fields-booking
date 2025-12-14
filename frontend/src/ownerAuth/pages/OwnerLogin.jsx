@@ -24,30 +24,48 @@ function OwnerLogin() {
 
       const data = await response.json();
 
+      // Handle non-200 responses BUT still check for status field
+      // (suspended returns 403 with status field)
       if (!response.ok) {
+        // Check if it's a suspended account (403 with status)
+        if (data.status === "suspended") {
+          setError(data.message || "Your account has been suspended. Please contact support.");
+          setLoading(false);
+          return;
+        }
+        // Other errors
         setError(data.message || "Invalid credentials");
         setLoading(false);
         return;
       }
 
+      // Handle different owner statuses from 200 responses
       if (data.status === "approved") {
+        // Approved - store auth data and navigate to dashboard
         localStorage.setItem("ownerToken", data.token);
         localStorage.setItem("ownerId", data.owner._id);
         localStorage.setItem("ownerName", data.owner.fullName || "");
-
         navigate("/owner/dashboard");
       } 
-      
       else if (data.status === "pending") {
+        // Account pending review
         navigate("/owner/pending");
       }
-
       else if (data.status === "rejected") {
-        setError("Your application was rejected.");
+        // Application was rejected
+        setError("Your application was rejected. Please contact support for more information.");
       }
-
+      else if (data.status === "suspended") {
+        // Account suspended by admin
+        setError(data.message || "Your account has been suspended. Please contact support.");
+      }
+      else if (data.status === "not_approved") {
+        // Account exists but not yet approved
+        setError("Your account is not yet approved. Please complete registration or contact support.");
+      }
       else {
-        setError("Unknown server response.");
+        // Unknown status - show error message if available
+        setError(data.message || "Unable to log in. Please try again or contact support.");
       }
 
     } catch (err) {

@@ -10,6 +10,9 @@ const OwnerSchema = new mongoose.Schema(
     // Business details
     businessName: String,
     address: String,
+    city: String,
+    area: String,
+    businessDescription: String,
     sportsType: String,
     commercialRecord: String,
 
@@ -17,14 +20,23 @@ const OwnerSchema = new mongoose.Schema(
     idCardUrl: String,
     businessProofUrl: String,
 
-    // Verification status
+    // Verification status (PDR 3.3)
     status: {
       type: String,
-      enum: ["incomplete", "pending_review", "approved", "rejected"],
+      enum: ["incomplete", "pending", "pending_review", "approved", "rejected", "suspended"],
       default: "incomplete",
     },
 
     rejectReason: String,
+
+    // ===============================
+    // NOTIFICATION PREFERENCES (PDR Settings)
+    // ===============================
+    notifications: {
+      bookingCompleted: { type: Boolean, default: true },
+      bookingCancelled: { type: Boolean, default: true },
+      newReview: { type: Boolean, default: true },
+    },
   },
   { timestamps: true }
 );

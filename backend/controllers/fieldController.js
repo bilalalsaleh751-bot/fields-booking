@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import fs from "fs";
 import path from "path";
 import Field from "../models/Field.js";
+import { createNotification } from "./notificationController.js";
 
 /* =========================================================
    CREATE FIELD (PDR 2.3 Phase 1 - Field Management)
@@ -100,10 +101,12 @@ export const createField = async (req, res) => {
 
 /* =========================================================
    GET FIELDS BY OWNER (PDR 2.3 Phase 1)
+   - EXCLUDES blocked fields from Owner Dashboard
+   - Owner cannot manage or edit blocked fields
 ========================================================= */
 export const getFieldsByOwner = async (req, res) => {
   try {
-    const { ownerId } = req.query;
+    const { ownerId, includeBlocked } = req.query;
 
     if (!ownerId) {
       return res.status(400).json({
@@ -114,7 +117,16 @@ export const getFieldsByOwner = async (req, res) => {
     // Convert ownerId to ObjectId for proper querying
     const ownerObjectId = new mongoose.Types.ObjectId(ownerId);
 
-    const fields = await Field.find({ owner: ownerObjectId })
+    // Build query - exclude blocked fields unless explicitly requested (admin use)
+    const query = { owner: ownerObjectId };
+    
+    // By default, exclude blocked fields from Owner Dashboard
+    // Blocked fields should NOT appear in Owner's field list
+    if (includeBlocked !== "true") {
+      query.approvalStatus = { $nin: ["blocked"] };
+    }
+
+    const fields = await Field.find(query)
       .sort({ createdAt: -1 })
       .lean();
 
@@ -150,7 +162,11 @@ export const searchFields = async (req, res) => {
       time,
     } = req.query;
 
-    const query = { isActive: true }; // Only show active fields to public
+    // Only show fields that are BOTH active AND approved by admin
+    const query = { 
+      isActive: true,
+      approvalStatus: "approved" // CRITICAL: Only show admin-approved fields
+    };
 
     if (sport) query.sport = sport;
     if (city) query.city = city;
@@ -220,9 +236,9 @@ export const getFieldById = async (req, res) => {
     if (!field) {
       return res.status(404).json({ message: "Field not found" });
     }
-    // Block public access to inactive fields
-    if (field.isActive === false) {
-      return res.status(404).json({ message: "Field not found" });
+    // Block public access to inactive or non-approved fields
+    if (field.isActive === false || (field.approvalStatus && field.approvalStatus !== "approved")) {
+      return res.status(404).json({ message: "Field not found or not available" });
     }
     res.json(field);
   } catch (err) {
@@ -273,6 +289,17 @@ export const addFieldReview = async (req, res) => {
       field.reviews.reduce((s, r) => s + r.rating, 0) / field.reviewCount;
 
     await field.save();
+
+    // Trigger notification for new review
+    if (field.owner) {
+      await createNotification(
+        field.owner,
+        "review",
+        `New ${numericRating}-star review on ${field.name} from ${reviewerName}`,
+        null,
+        field._id
+      );
+    }
 
     res.status(201).json({
       message: "Review added successfully",

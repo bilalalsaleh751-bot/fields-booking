@@ -139,6 +139,10 @@ export default function BookingFlow() {
     closeHour: null,
   });
 
+  // Check if user is logged in
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userId, setUserId] = useState(null);
+
   // فورم الحجز
   const [form, setForm] = useState({
     sport: "",
@@ -155,6 +159,24 @@ export default function BookingFlow() {
     promoCode: "",
     notes: "",
   });
+  
+  // Auto-fill user details if logged in
+  useEffect(() => {
+    const token = localStorage.getItem("userToken");
+    const id = localStorage.getItem("userId");
+    const name = localStorage.getItem("userName");
+    const email = localStorage.getItem("userEmail");
+    
+    if (token && id) {
+      setIsLoggedIn(true);
+      setUserId(id);
+      setForm(prev => ({
+        ...prev,
+        fullName: prev.fullName || name || "",
+        email: prev.email || email || "",
+      }));
+    }
+  }, []);
 
   // تحميل تفاصيل الملعب
   useEffect(() => {
@@ -378,6 +400,8 @@ export default function BookingFlow() {
         startTime: form.time,
         duration: durationNumber,
         totalPrice,
+        // Link to user account if logged in
+        userId: isLoggedIn ? userId : undefined,
       };
 
       const res = await fetch("http://localhost:5000/api/bookings", {

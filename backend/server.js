@@ -9,6 +9,8 @@ import bookingRoutes from "./routes/bookingRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import availabilityRoutes from "./routes/availabilityRoutes.js";
 import ownerRoutes from "./routes/ownerRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
+import publicRoutes from "./routes/publicRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -38,6 +40,12 @@ app.use("/api/users", userRoutes);
 
 // OWNER ROUTES
 app.use("/api/owner", ownerRoutes);
+
+// ADMIN ROUTES
+app.use("/api/admin", adminRoutes);
+
+// PUBLIC CMS ROUTES (for frontend)
+app.use("/api/public", publicRoutes);
 
 app.get("/", (req, res) => {
   res.send("API is running...");

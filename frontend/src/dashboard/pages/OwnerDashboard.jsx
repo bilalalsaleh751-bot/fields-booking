@@ -48,7 +48,8 @@ function OwnerDashboard() {
       setLoading(true);
 
       const res = await fetch(
-        `http://localhost:5000/api/owner/dashboard/overview?ownerId=${ownerId}`
+        `http://localhost:5000/api/owner/dashboard/overview?ownerId=${ownerId}`,
+        { cache: "no-store" } // Always fetch fresh data
       );
       const data = await res.json();
 
@@ -66,10 +67,22 @@ function OwnerDashboard() {
     }
   }, [ownerId]);
 
-  // Fetch dashboard on mount and when navigating back to this page
+  // Refresh trigger state - updated when booking actions occur
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Check for pending refresh from other pages (booking complete/cancel)
+  useEffect(() => {
+    const pendingRefresh = sessionStorage.getItem("dashboardNeedsRefresh");
+    if (pendingRefresh) {
+      sessionStorage.removeItem("dashboardNeedsRefresh");
+      setRefreshKey((k) => k + 1); // Trigger re-fetch
+    }
+  }, [location.key]); // Check on every navigation
+
+  // Fetch dashboard on mount, navigation, or refresh trigger
   useEffect(() => {
     fetchDashboard();
-  }, [fetchDashboard, location.key]); // location.key changes on navigation
+  }, [fetchDashboard, refreshKey]); // refreshKey forces re-fetch after booking actions
 
   if (loading) {
     return (

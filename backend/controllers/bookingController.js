@@ -31,6 +31,7 @@ export const createBooking = async (req, res) => {
       date,
       startTime,
       duration,
+      userId, // Optional: link to logged-in user
     } = req.body;
 
     // ============================================================
@@ -158,7 +159,7 @@ export const createBooking = async (req, res) => {
       const endMinutes = startMinutes + (durationNum * 60);
       const calculatedEndTime = minutesToTime(endMinutes);
 
-      const [booking] = await Booking.create([{
+      const bookingData = {
         field: fieldId,
         userName,
         userEmail,
@@ -168,8 +169,15 @@ export const createBooking = async (req, res) => {
         endTime: calculatedEndTime, // Explicit end time for clarity
         duration: durationNum,
         totalPrice,
-        status: "pending",
-      }], { session });
+        status: "confirmed", // Auto-confirmed (no payment gateway)
+      };
+      
+      // Link to user account if userId provided
+      if (userId) {
+        bookingData.user = userId;
+      }
+      
+      const [booking] = await Booking.create([bookingData], { session });
 
       // Commit the transaction
       await session.commitTransaction();

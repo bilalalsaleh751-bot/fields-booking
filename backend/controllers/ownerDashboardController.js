@@ -2,6 +2,7 @@
 import mongoose from "mongoose";
 import Booking from "../models/Booking.js";
 import Field from "../models/Field.js";
+import PlatformSettings from "../models/PlatformSettings.js";
 
 // Helper: Convert date + time → Date object
 function buildDateObject(dateStr, timeStr) {
@@ -30,6 +31,10 @@ export const getOwnerDashboardOverview = async (req, res) => {
     const fieldIds = fields.map((f) => f._id);
 
     if (fieldIds.length === 0) {
+      // Fetch commission rate from platform settings even for empty case
+      const settings = await PlatformSettings.getSettings();
+      const commissionRatePercent = settings.commissionRate || 15;
+      
       return res.json({
         stats: {
           totalBookings: 0,
@@ -42,7 +47,8 @@ export const getOwnerDashboardOverview = async (req, res) => {
           totalEarningsThisMonth: 0,
           commission: 0,
           netToOwner: 0,
-          commissionRate: 0.15,
+          commissionRate: commissionRatePercent / 100, // Convert to decimal
+          commissionRatePercent, // Also send percentage for display
         },
         reviews: [],
       });
@@ -192,6 +198,10 @@ export const getOwnerDashboardOverview = async (req, res) => {
     let confirmedBookings = 0;  // Confirmed but not yet completed
     let pendingBookings = 0;    // Awaiting confirmation
     let cancelledBookings = 0;  // Cancelled (refunded)
+    
+    // PDR 2.5: Track fields with at least one completed booking
+    const fieldsWithCompletedBookings = new Set();
+    let lastMonthCompletedBookings = 0;
 
     // Get all bookings for counting
     const allBookings = await Booking.find({
@@ -209,6 +219,8 @@ export const getOwnerDashboardOverview = async (req, res) => {
             // ONLY completed bookings count towards earnings
             totalEarningsThisMonth += b.totalPrice || 0;
             completedBookings++;
+            // Track which fields have completed bookings (this month)
+            fieldsWithCompletedBookings.add(b.field.toString());
             break;
           case "confirmed":
             // Confirmed but not completed - no earnings yet
@@ -228,10 +240,14 @@ export const getOwnerDashboardOverview = async (req, res) => {
       // Last month earnings (ONLY completed bookings)
       if (d >= startOfLastMonth && d <= endOfLastMonth && b.status === "completed") {
         totalEarningsLastMonth += b.totalPrice || 0;
+        lastMonthCompletedBookings++;
       }
     });
 
-    const commissionRate = 0.15;
+    // FETCH COMMISSION RATE FROM PLATFORM SETTINGS (SINGLE SOURCE OF TRUTH)
+    const settings = await PlatformSettings.getSettings();
+    const commissionRatePercent = settings.commissionRate || 15; // Default 15%
+    const commissionRate = commissionRatePercent / 100; // Convert to decimal (e.g., 15 → 0.15)
     const commission = totalEarningsThisMonth * commissionRate;
     const netToOwner = totalEarningsThisMonth - commission;
 
@@ -267,13 +283,18 @@ export const getOwnerDashboardOverview = async (req, res) => {
         commission,
         platformCommission: commission, // Alias for frontend
         netToOwner,
-        commissionRate: commissionRate, // Keep as decimal (0.15)
+        commissionRate: commissionRate, // Decimal (e.g., 0.15)
+        commissionRatePercent: commissionRatePercent, // Percentage (e.g., 15)
         
         // Booking counts by status (this month)
         completedBookings,   // Earnings-generating bookings
         confirmedBookings,   // Confirmed but not completed
         pendingBookings,     // Awaiting confirmation
         cancelledBookings,   // Refunded
+        
+        // PDR 2.5: Fields with completed bookings
+        activeFieldsWithEarnings: fieldsWithCompletedBookings.size,
+        lastMonthCompletedBookings,
         
         // Legacy aliases for backward compatibility
         paidBookings: completedBookings,

@@ -112,13 +112,20 @@ export const ownerLogin = async (req, res) => {
 
     const cleanStatus = (owner.status || "").trim();
 
-    // STATUS HANDLING — Same as PDR
-    if (cleanStatus === "pending_review") {
+    // STATUS HANDLING — Per PDR
+    if (cleanStatus === "pending" || cleanStatus === "pending_review") {
       return res.json({ status: "pending" });
     }
 
     if (cleanStatus === "rejected") {
       return res.json({ status: "rejected" });
+    }
+
+    if (cleanStatus === "suspended") {
+      return res.status(403).json({ 
+        status: "suspended",
+        message: "Your account has been suspended. Please contact support." 
+      });
     }
 
     if (cleanStatus !== "approved") {
