@@ -74,6 +74,16 @@
   margin-bottom: 20px;
 }
 
+.user-auth-success {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #16a34a;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
 .user-auth-form {
   display: flex;
   flex-direction: column;

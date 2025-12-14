@@ -3,6 +3,7 @@ import Booking from "../models/Booking.js";
 import Field from "../models/Field.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 
 // ============================================================
 // AUTH: REGISTER
@@ -407,6 +408,110 @@ export const getReceipt = async (req, res) => {
     res.json({ receipt });
   } catch (err) {
     console.error("Get receipt error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ============================================================
+// PASSWORD: FORGOT PASSWORD (Request Reset)
+// ============================================================
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const user = await User.findOne({ email });
+
+    // Always return success to prevent email enumeration
+    if (!user) {
+      return res.json({ message: "If the email exists, a reset link will be sent" });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    user.resetToken = resetToken;
+    user.resetTokenExpiry = resetTokenExpiry;
+    await user.save();
+
+    // In production, send email here
+    // For development, return the token
+    const resetLink = `http://localhost:5176/reset-password/${resetToken}`;
+    
+    console.log(`Password reset link for ${email}: ${resetLink}`);
+
+    res.json({ 
+      message: "If the email exists, a reset link will be sent",
+      // In development only - remove in production
+      resetLink,
+    });
+  } catch (err) {
+    console.error("Forgot password error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ============================================================
+// PASSWORD: RESET PASSWORD (With Token)
+// ============================================================
+export const resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({ message: "Token and new password are required" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+
+    const user = await User.findOne({
+      resetToken: token,
+      resetTokenExpiry: { $gt: new Date() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired reset token" });
+    }
+
+    // Hash new password
+    const hashed = await bcrypt.hash(newPassword, 10);
+    user.password = hashed;
+    user.resetToken = undefined;
+    user.resetTokenExpiry = undefined;
+    await user.save();
+
+    res.json({ message: "Password reset successfully" });
+  } catch (err) {
+    console.error("Reset password error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ============================================================
+// PASSWORD: VERIFY RESET TOKEN
+// ============================================================
+export const verifyResetToken = async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const user = await User.findOne({
+      resetToken: token,
+      resetTokenExpiry: { $gt: new Date() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ valid: false, message: "Invalid or expired reset token" });
+    }
+
+    res.json({ valid: true, email: user.email });
+  } catch (err) {
+    console.error("Verify token error:", err);
     res.status(500).json({ message: "Server error" });
   }
 };

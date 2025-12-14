@@ -35,13 +35,13 @@ export default function UserLogin() {
       localStorage.setItem("userName", data.user.name);
       localStorage.setItem("userEmail", data.user.email);
 
-      // Redirect to account or previous page
+      // Redirect to home or previous page
       const returnTo = sessionStorage.getItem("returnTo");
       if (returnTo) {
         sessionStorage.removeItem("returnTo");
         navigate(returnTo);
       } else {
-        navigate("/account/bookings");
+        navigate("/"); // Go to home, not profile
       }
     } catch (err) {
       console.error(err);
@@ -96,6 +96,11 @@ export default function UserLogin() {
 
         <div className="user-auth-footer">
           <p>
+            <Link to="/forgot-password" className="user-auth-link">
+              Forgot your password?
+            </Link>
+          </p>
+          <p style={{ marginTop: 12 }}>
             Don't have an account?{" "}
             <Link to="/register" className="user-auth-link">
               Sign up

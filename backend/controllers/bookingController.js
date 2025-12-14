@@ -169,7 +169,7 @@ export const createBooking = async (req, res) => {
         endTime: calculatedEndTime, // Explicit end time for clarity
         duration: durationNum,
         totalPrice,
-        status: "confirmed", // Auto-confirmed (no payment gateway)
+        status: "pending", // Starts as pending, owner can confirm/complete
       };
       
       // Link to user account if userId provided

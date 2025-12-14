@@ -4,6 +4,8 @@ import Category from "../models/Category.js";
 import PromoCode from "../models/PromoCode.js";
 import HomepageContent from "../models/HomepageContent.js";
 import FooterContent from "../models/FooterContent.js";
+import fs from "fs";
+import path from "path";
 
 // ============================================================
 // BANNERS
@@ -293,6 +295,42 @@ export const updateFooterContent = async (req, res) => {
     res.json({ message: "Footer content updated", content });
   } catch (err) {
     console.error("Update footer content error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ============================================================
+// CMS IMAGE UPLOAD
+// ============================================================
+export const uploadCMSImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No image file provided" });
+    }
+
+    // Create cms uploads folder if it doesn't exist
+    const cmsUploadsDir = path.join("uploads", "cms");
+    if (!fs.existsSync(cmsUploadsDir)) {
+      fs.mkdirSync(cmsUploadsDir, { recursive: true });
+    }
+
+    // Move file to cms folder
+    const oldPath = req.file.path;
+    const newFilename = `cms-${Date.now()}-${req.file.originalname}`;
+    const newPath = path.join(cmsUploadsDir, newFilename);
+    
+    fs.renameSync(oldPath, newPath);
+
+    // Return the URL path
+    const imageUrl = `uploads/cms/${newFilename}`;
+    
+    res.json({
+      message: "Image uploaded successfully",
+      imageUrl,
+      fullUrl: `http://localhost:5000/${imageUrl}`,
+    });
+  } catch (err) {
+    console.error("CMS image upload error:", err);
     res.status(500).json({ message: "Server error" });
   }
 };

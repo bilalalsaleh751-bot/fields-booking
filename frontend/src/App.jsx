@@ -14,6 +14,8 @@ import FAQ from "./pages/FAQ";
 // ========== User Authentication ==========
 import UserLogin from "./userAuth/pages/UserLogin";
 import UserRegister from "./userAuth/pages/UserRegister";
+import ForgotPassword from "./userAuth/pages/ForgotPassword";
+import ResetPassword from "./userAuth/pages/ResetPassword";
 
 // ========== User Account ==========
 import AccountLayout from "./account/layout/AccountLayout";
@@ -48,6 +50,7 @@ import AdminCMS from "./admin/pages/AdminCMS";
 import AdminNotifications from "./admin/pages/AdminNotifications";
 import AdminSettings from "./admin/pages/AdminSettings";
 import AdminActivity from "./admin/pages/AdminActivity";
+import AdminUsers from "./admin/pages/AdminUsers";
 
 
 // =====================================
@@ -60,7 +63,7 @@ function AppLayout() {
   const isOwnerRoute = location.pathname.startsWith("/owner");
   const isAdminRoute = location.pathname.startsWith("/admin");
   const isAccountRoute = location.pathname.startsWith("/account");
-  const isAuthPage = ["/login", "/register"].includes(location.pathname);
+  const isAuthPage = ["/login", "/register", "/forgot-password"].includes(location.pathname) || location.pathname.startsWith("/reset-password");
   const isHomePage = location.pathname === "/";
   const isFAQPage = location.pathname === "/faq";
   
@@ -88,6 +91,8 @@ function AppLayout() {
         {/* ========== User Authentication ========== */}
         <Route path="/login" element={<UserLogin />} />
         <Route path="/register" element={<UserRegister />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
 
 
         {/* ========== User Account ========== */}
@@ -131,6 +136,7 @@ function AppLayout() {
           <Route path="notifications" element={<AdminNotifications />} />
           <Route path="settings" element={<AdminSettings />} />
           <Route path="activity" element={<AdminActivity />} />
+          <Route path="users" element={<AdminUsers />} />
         </Route>
 
       </Routes>

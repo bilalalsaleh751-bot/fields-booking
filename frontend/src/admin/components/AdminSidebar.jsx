@@ -18,6 +18,7 @@ function AdminSidebar() {
 
   const navItems = [
     { label: "Dashboard", icon: "📊", path: "/admin/dashboard" },
+    { label: "Users", icon: "👤", path: "/admin/users" },
     { label: "Owners", icon: "👥", path: "/admin/owners" },
     { label: "Fields", icon: "🏟️", path: "/admin/fields" },
     { label: "Bookings", icon: "📅", path: "/admin/bookings" },

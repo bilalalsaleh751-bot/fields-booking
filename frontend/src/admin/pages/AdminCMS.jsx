@@ -1,6 +1,7 @@
 // src/admin/pages/AdminCMS.jsx
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import ImageUpload from "../components/ImageUpload";
 
 function AdminCMS() {
   const navigate = useNavigate();
@@ -282,11 +283,10 @@ function AdminCMS() {
                   />
                 </div>
                 <div className="admin-form-group">
-                  <label className="admin-form-label">Background Image URL</label>
-                  <input
-                    className="admin-form-input"
+                  <ImageUpload
+                    label="Background Image"
                     value={homepageContent.hero?.backgroundImage || ""}
-                    onChange={(e) => updateHomepageSection("hero", "backgroundImage", e.target.value)}
+                    onChange={(url) => updateHomepageSection("hero", "backgroundImage", url)}
                   />
                 </div>
                 <div className="admin-form-group">
@@ -689,11 +689,10 @@ function AdminCMS() {
                     />
                   </div>
                   <div className="admin-form-group">
-                    <label className="admin-form-label">Image URL</label>
-                    <input
-                      className="admin-form-input"
+                    <ImageUpload
+                      label="Banner Image"
                       value={formData.imageUrl || ""}
-                      onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                      onChange={(url) => setFormData({ ...formData, imageUrl: url })}
                     />
                   </div>
                   <div className="admin-form-group">

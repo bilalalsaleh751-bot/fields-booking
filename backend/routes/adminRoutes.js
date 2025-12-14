@@ -40,7 +40,9 @@ import {
   getPromoCodes, createPromoCode, updatePromoCode, deletePromoCode,
   getHomepageContent, updateHomepageContent,
   getFooterContent, updateFooterContent,
+  uploadCMSImage,
 } from "../controllers/adminCMSController.js";
+import { upload } from "../utils/upload.js";
 import {
   getTemplates, createTemplate, updateTemplate, deleteTemplate,
   sendBroadcast,
@@ -53,6 +55,15 @@ import {
   addArea, removeArea,
 } from "../controllers/adminSettingsController.js";
 import { getActivityLogs, getActivityLog } from "../controllers/adminActivityController.js";
+import {
+  listUsers,
+  getUser,
+  updateUserRole,
+  activateUser,
+  deactivateUser,
+  resetUserPassword,
+  generateResetToken,
+} from "../controllers/adminUserController.js";
 
 const router = express.Router();
 
@@ -146,6 +157,9 @@ router.put("/cms/homepage", requirePermission("manage_cms"), updateHomepageConte
 router.get("/cms/footer", requirePermission("view_dashboard"), getFooterContent);
 router.put("/cms/footer", requirePermission("manage_cms"), updateFooterContent);
 
+// CMS Image Upload
+router.post("/cms/upload", requirePermission("manage_cms"), upload.single("image"), uploadCMSImage);
+
 // ============================================================
 // NOTIFICATIONS
 // ============================================================
@@ -171,6 +185,17 @@ router.put("/settings/cities/:id", requirePermission("manage_cities"), updateCit
 router.delete("/settings/cities/:id", requirePermission("manage_cities"), deleteCity);
 router.post("/settings/cities/:cityId/areas", requirePermission("manage_cities"), addArea);
 router.delete("/settings/cities/:cityId/areas/:areaId", requirePermission("manage_cities"), removeArea);
+
+// ============================================================
+// USERS MANAGEMENT
+// ============================================================
+router.get("/users", requirePermission("view_dashboard"), listUsers);
+router.get("/users/:id", requirePermission("view_dashboard"), getUser);
+router.put("/users/:id/role", requirePermission("manage_users"), updateUserRole);
+router.put("/users/:id/activate", requirePermission("manage_users"), activateUser);
+router.put("/users/:id/deactivate", requirePermission("manage_users"), deactivateUser);
+router.put("/users/:id/reset-password", requirePermission("manage_users"), resetUserPassword);
+router.post("/users/:id/generate-reset-token", requirePermission("manage_users"), generateResetToken);
 
 // ============================================================
 // ACTIVITY LOGS
