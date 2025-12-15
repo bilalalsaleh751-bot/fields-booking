@@ -11,6 +11,7 @@ import availabilityRoutes from "./routes/availabilityRoutes.js";
 import ownerRoutes from "./routes/ownerRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import publicRoutes from "./routes/publicRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -46,6 +47,9 @@ app.use("/api/admin", adminRoutes);
 
 // PUBLIC CMS ROUTES (for frontend)
 app.use("/api/public", publicRoutes);
+
+// UNIFIED AUTH ROUTES (single login for all roles)
+app.use("/api/auth", authRoutes);
 
 app.get("/", (req, res) => {
   res.send("API is running...");

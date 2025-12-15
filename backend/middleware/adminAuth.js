@@ -15,13 +15,21 @@ export const protectAdmin = async (req, res, next) => {
     
     const token = authHeader.split(" ")[1];
     
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "admin_secret_key");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "jwtsecret");
     
-    if (!decoded.adminId) {
+    // Support both adminId (legacy) and id (unified auth) formats
+    const adminId = decoded.adminId || decoded.id;
+    
+    if (!adminId) {
       return res.status(401).json({ message: "Not authorized - Invalid token" });
     }
     
-    const admin = await Admin.findById(decoded.adminId).select("-password");
+    // Check if this is an admin token
+    if (decoded.type && decoded.type !== "admin") {
+      return res.status(401).json({ message: "Not authorized - Admin access required" });
+    }
+    
+    const admin = await Admin.findById(adminId).select("-password");
     
     if (!admin) {
       return res.status(401).json({ message: "Not authorized - Admin not found" });
@@ -89,6 +97,15 @@ const PERMISSIONS = {
   
   // Dashboard
   view_dashboard: ["super_admin", "admin", "support"],
+  
+  // User management
+  manage_users: ["super_admin", "admin"],
+  
+  // Admin management (super_admin only)
+  manage_admins: ["super_admin"],
+  create_admin: ["super_admin"],
+  create_owner: ["super_admin", "admin"],
+  create_user: ["super_admin", "admin"],
 };
 
 // ============================================================

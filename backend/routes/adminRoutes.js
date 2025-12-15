@@ -64,6 +64,16 @@ import {
   resetUserPassword,
   generateResetToken,
 } from "../controllers/adminUserController.js";
+import {
+  listAdmins,
+  createAdmin,
+  updateAdminRole,
+  toggleAdminStatus,
+  resetAdminPassword,
+  updateOwnAccount,
+  createUserAccount,
+  createOwnerAccount,
+} from "../controllers/adminAccountController.js";
 
 const router = express.Router();
 
@@ -202,6 +212,22 @@ router.post("/users/:id/generate-reset-token", requirePermission("manage_users")
 // ============================================================
 router.get("/activity", requirePermission("view_activity"), getActivityLogs);
 router.get("/activity/:id", requirePermission("view_activity"), getActivityLog);
+
+// ============================================================
+// ADMIN MANAGEMENT (Super Admin only)
+// ============================================================
+router.get("/admins", requirePermission("manage_admins"), listAdmins);
+router.post("/admins", requirePermission("create_admin"), createAdmin);
+router.put("/admins/:id/role", requirePermission("manage_admins"), updateAdminRole);
+router.put("/admins/:id/status", requirePermission("manage_admins"), toggleAdminStatus);
+router.put("/admins/:id/reset-password", requirePermission("manage_admins"), resetAdminPassword);
+router.put("/account/self", updateOwnAccount); // Any admin can update their own account
+
+// ============================================================
+// CREATE ACCOUNTS (From Dashboard)
+// ============================================================
+router.post("/accounts/user", requirePermission("create_user"), createUserAccount);
+router.post("/accounts/owner", requirePermission("create_owner"), createOwnerAccount);
 
 export default router;
 
