@@ -39,7 +39,8 @@ function OwnerBookings() {
       const queryParams = new URLSearchParams({ ownerId });
 
       const res = await fetch(
-        `http://localhost:5000/api/owner/bookings?${queryParams}`
+        `http://localhost:5000/api/owner/bookings?${queryParams}`,
+        { cache: "no-store" }
       );
       const data = await res.json();
       if (res.ok) setBookings(data.bookings || []);
@@ -52,6 +53,15 @@ function OwnerBookings() {
   useEffect(() => {
     fetchBookings();
   }, [fetchBookings, location.key]);
+
+  // Poll for new bookings every 25 seconds
+  useEffect(() => {
+    if (!ownerId) return;
+    const pollInterval = setInterval(() => {
+      fetchBookings();
+    }, 25000);
+    return () => clearInterval(pollInterval);
+  }, [ownerId, fetchBookings]);
 
   // Filter bookings by category
   const filteredBookings = useMemo(() => {

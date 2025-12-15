@@ -6,16 +6,21 @@ const Header = () => {
   const navigate = useNavigate();
   const [authState, setAuthState] = useState({
     isUser: false,
-    isOwner: false,
-    isAdmin: false,
     name: "",
   });
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef(null);
 
-  // Check auth state on mount
+  // Check auth state on mount - ONLY for users, never admin/owner
   useEffect(() => {
     checkAuthState();
+    
+    // Listen for storage changes (logout from other tabs)
+    const handleStorageChange = () => {
+      checkAuthState();
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
   const checkAuthState = () => {
@@ -23,32 +28,27 @@ const Header = () => {
     const ownerToken = localStorage.getItem("ownerToken");
     const adminToken = localStorage.getItem("adminToken");
 
-    if (adminToken) {
+    // CRITICAL: Header should ONLY show for users or guests
+    // If admin or owner token exists, do NOT show header menu
+    if (adminToken || ownerToken) {
+      // Admin/Owner logged in - they should not see this header
+      // This should never happen due to route guards, but as safety:
       setAuthState({
         isUser: false,
-        isOwner: false,
-        isAdmin: true,
-        name: "Admin",
+        name: "",
       });
-    } else if (ownerToken) {
-      setAuthState({
-        isUser: false,
-        isOwner: true,
-        isAdmin: false,
-        name: localStorage.getItem("ownerName") || "Owner",
-      });
-    } else if (userToken) {
+      return;
+    }
+
+    // Only show user menu if user token exists
+    if (userToken) {
       setAuthState({
         isUser: true,
-        isOwner: false,
-        isAdmin: false,
         name: localStorage.getItem("userName") || "User",
       });
     } else {
       setAuthState({
         isUser: false,
-        isOwner: false,
-        isAdmin: false,
         name: "",
       });
     }
@@ -66,27 +66,19 @@ const Header = () => {
   }, []);
 
   const handleLogout = () => {
-    // Clear all auth tokens
+    // Clear user auth tokens only
     localStorage.removeItem("userToken");
     localStorage.removeItem("userId");
     localStorage.removeItem("userName");
     localStorage.removeItem("userEmail");
-    localStorage.removeItem("ownerToken");
-    localStorage.removeItem("ownerName");
-    localStorage.removeItem("ownerId");
-    localStorage.removeItem("adminToken");
     
     setAuthState({
       isUser: false,
-      isOwner: false,
-      isAdmin: false,
       name: "",
     });
     setShowUserMenu(false);
     navigate("/");
   };
-
-  const isLoggedIn = authState.isUser || authState.isOwner || authState.isAdmin;
 
   return (
     <header className="main-header">
@@ -107,13 +99,13 @@ const Header = () => {
             Book Now
           </Link>
 
-          {!isLoggedIn ? (
+          {!authState.isUser ? (
             // NOT LOGGED IN - Show Login button
             <Link to="/login" className="btn-solid">
               Login
             </Link>
           ) : (
-            // LOGGED IN - Show user menu
+            // LOGGED IN AS USER - Show user menu only
             <div className="user-menu-wrapper" ref={menuRef}>
               <button
                 className="btn-solid user-btn"
@@ -128,71 +120,22 @@ const Header = () => {
 
               {showUserMenu && (
                 <div className="user-dropdown">
-                  {/* USER MENU */}
-                  {authState.isUser && (
-                    <>
-                      <Link
-                        to="/account/bookings"
-                        className="dropdown-item"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        <span className="dropdown-icon">📅</span>
-                        My Bookings
-                      </Link>
-                      <Link
-                        to="/account/profile"
-                        className="dropdown-item"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        <span className="dropdown-icon">👤</span>
-                        My Profile
-                      </Link>
-                    </>
-                  )}
-
-                  {/* OWNER MENU */}
-                  {authState.isOwner && (
-                    <>
-                      <Link
-                        to="/owner/dashboard"
-                        className="dropdown-item"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        <span className="dropdown-icon">📊</span>
-                        Dashboard
-                      </Link>
-                      <Link
-                        to="/owner/bookings"
-                        className="dropdown-item"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        <span className="dropdown-icon">📅</span>
-                        Bookings
-                      </Link>
-                      <Link
-                        to="/owner/settings"
-                        className="dropdown-item"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        <span className="dropdown-icon">⚙️</span>
-                        Settings
-                      </Link>
-                    </>
-                  )}
-
-                  {/* ADMIN MENU */}
-                  {authState.isAdmin && (
-                    <Link
-                      to="/admin/dashboard"
-                      className="dropdown-item"
-                      onClick={() => setShowUserMenu(false)}
-                    >
-                      <span className="dropdown-icon">🛡️</span>
-                      Admin Dashboard
-                    </Link>
-                  )}
-
-                  {/* LOGOUT */}
+                  <Link
+                    to="/account/bookings"
+                    className="dropdown-item"
+                    onClick={() => setShowUserMenu(false)}
+                  >
+                    <span className="dropdown-icon">📅</span>
+                    My Bookings
+                  </Link>
+                  <Link
+                    to="/account/profile"
+                    className="dropdown-item"
+                    onClick={() => setShowUserMenu(false)}
+                  >
+                    <span className="dropdown-icon">👤</span>
+                    My Profile
+                  </Link>
                   <div className="dropdown-divider"></div>
                   <button onClick={handleLogout} className="dropdown-item logout">
                     <span className="dropdown-icon">🚪</span>

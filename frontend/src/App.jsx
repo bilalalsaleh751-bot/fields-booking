@@ -1,8 +1,9 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from "react-router-dom";
 
 // ========== Layout Components ==========
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
+import RouteGuard from "./components/auth/RouteGuard";
 
 // ========== Main Website Pages ==========
 import Home from "./pages/Home";
@@ -11,8 +12,8 @@ import FieldDetails from "./pages/FieldDetails";
 import BookingFlow from "./pages/BookingFlow";
 import FAQ from "./pages/FAQ";
 
-// ========== User Authentication ==========
-import UserLogin from "./userAuth/pages/UserLogin";
+// ========== Unified Authentication ==========
+import UnifiedLogin from "./auth/pages/UnifiedLogin";
 import UserRegister from "./userAuth/pages/UserRegister";
 import ForgotPassword from "./userAuth/pages/ForgotPassword";
 import ResetPassword from "./userAuth/pages/ResetPassword";
@@ -31,8 +32,7 @@ import OwnerFinancial from "./dashboard/pages/OwnerFinancial";
 import OwnerSettings from "./dashboard/pages/OwnerSettings";
 import OwnerLayout from "./dashboard/layout/OwnerLayout";
 
-// ========== Owner Authentication Pages ==========
-import OwnerLogin from "./ownerAuth/pages/OwnerLogin";
+// ========== Owner Registration ==========
 import OwnerRegisterStep1 from "./ownerAuth/pages/OwnerRegisterStep1";
 import OwnerRegisterStep2 from "./ownerAuth/pages/OwnerRegisterStep2";
 import OwnerRegisterStep3 from "./ownerAuth/pages/OwnerRegisterStep3";
@@ -40,7 +40,6 @@ import OwnerPendingApproval from "./ownerAuth/pages/OwnerPendingApproval";
 
 // ========== Admin Dashboard ==========
 import AdminLayout from "./admin/layout/AdminLayout";
-import AdminLogin from "./admin/pages/AdminLogin";
 import AdminDashboard from "./admin/pages/AdminDashboard";
 import AdminOwners from "./admin/pages/AdminOwners";
 import AdminFields from "./admin/pages/AdminFields";
@@ -51,15 +50,21 @@ import AdminNotifications from "./admin/pages/AdminNotifications";
 import AdminSettings from "./admin/pages/AdminSettings";
 import AdminActivity from "./admin/pages/AdminActivity";
 import AdminUsers from "./admin/pages/AdminUsers";
+import AdminAccounts from "./admin/pages/AdminAccounts";
 
 
 // =====================================
-// Layout Wrapper
+// Layout Wrapper - ROLE-BASED VISIBILITY
 // =====================================
 function AppLayout() {
   const location = useLocation();
 
-  // Routes that need special layout handling
+  // Check for admin/owner tokens - THEY NEVER SEE HEADER/FOOTER
+  const adminToken = localStorage.getItem("adminToken");
+  const ownerToken = localStorage.getItem("ownerToken");
+  const userToken = localStorage.getItem("userToken");
+  
+  // Route detection
   const isOwnerRoute = location.pathname.startsWith("/owner");
   const isAdminRoute = location.pathname.startsWith("/admin");
   const isAccountRoute = location.pathname.startsWith("/account");
@@ -67,51 +72,83 @@ function AppLayout() {
   const isHomePage = location.pathname === "/";
   const isFAQPage = location.pathname === "/faq";
   
-  // Hide header for: owner, admin, account, and auth pages
-  const hideHeader = isOwnerRoute || isAdminRoute || isAccountRoute || isAuthPage;
+  // CRITICAL: Admin and Owner NEVER see header
+  // Header only shown for: guests or users on public pages
+  const isAdminOrOwner = adminToken || ownerToken;
+  const hideHeader = isAdminOrOwner || isOwnerRoute || isAdminRoute || isAccountRoute || isAuthPage;
   
-  // Hide footer for: pages that have their own footer, or special layouts
+  // Footer shown only for public pages that don't have their own footer
   const hideFooter = hideHeader || isHomePage || isFAQPage;
 
   return (
     <>
-      {/* Show header only for public pages */}
+      {/* Header: ONLY for users/guests on public pages */}
       {!hideHeader && <Header />}
 
       <Routes>
+        {/* ========== Main Website (Users/Guests Only) ========== */}
+        <Route path="/" element={
+          <RouteGuard allowedRoles={[]}>
+            <Home />
+          </RouteGuard>
+        } />
+        <Route path="/discover" element={
+          <RouteGuard allowedRoles={[]}>
+            <Discover />
+          </RouteGuard>
+        } />
+        <Route path="/field/:id" element={
+          <RouteGuard allowedRoles={[]}>
+            <FieldDetails />
+          </RouteGuard>
+        } />
+        <Route path="/booking/:fieldId" element={
+          <RouteGuard allowedRoles={[]}>
+            <BookingFlow />
+          </RouteGuard>
+        } />
+        <Route path="/faq" element={
+          <RouteGuard allowedRoles={[]}>
+            <FAQ />
+          </RouteGuard>
+        } />
 
-        {/* ========== Main Website ========== */}
-        <Route path="/" element={<Home />} />
-        <Route path="/discover" element={<Discover />} />
-        <Route path="/field/:id" element={<FieldDetails />} />
-        <Route path="/booking/:fieldId" element={<BookingFlow />} />
-        <Route path="/faq" element={<FAQ />} />
 
-
-        {/* ========== User Authentication ========== */}
-        <Route path="/login" element={<UserLogin />} />
+        {/* ========== UNIFIED Authentication (Single Login) ========== */}
+        <Route path="/login" element={<UnifiedLogin />} />
         <Route path="/register" element={<UserRegister />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
 
+        {/* Legacy routes redirect to unified login */}
+        <Route path="/owner/login" element={<Navigate to="/login" replace />} />
+        <Route path="/admin/login" element={<Navigate to="/login" replace />} />
 
-        {/* ========== User Account ========== */}
-        <Route path="/account" element={<AccountLayout />}>
+
+        {/* ========== User Account (Users Only) ========== */}
+        <Route path="/account" element={
+          <RouteGuard allowedRoles={["user"]}>
+            <AccountLayout />
+          </RouteGuard>
+        }>
           <Route path="bookings" element={<AccountBookings />} />
           <Route path="profile" element={<AccountProfile />} />
         </Route>
 
 
-        {/* ========== Owner Authentication ========== */}
-        <Route path="/owner/login" element={<OwnerLogin />} />
+        {/* ========== Owner Registration (Separate flow) ========== */}
         <Route path="/owner/register" element={<OwnerRegisterStep1 />} />
         <Route path="/owner/register/details" element={<OwnerRegisterStep2 />} />
         <Route path="/owner/register/upload" element={<OwnerRegisterStep3 />} />
         <Route path="/owner/pending" element={<OwnerPendingApproval />} />
 
 
-        {/* ========== Owner Panel ========== */}
-        <Route path="/owner" element={<OwnerLayout />}>
+        {/* ========== Owner Panel (Owners Only) ========== */}
+        <Route path="/owner" element={
+          <RouteGuard allowedRoles={["owner"]}>
+            <OwnerLayout />
+          </RouteGuard>
+        }>
           <Route path="dashboard" element={<OwnerDashboard />} />
           <Route path="fields" element={<OwnerFields />} />
           <Route path="bookings" element={<OwnerBookings />} />
@@ -121,12 +158,12 @@ function AppLayout() {
         </Route>
 
 
-        {/* ========== Admin Authentication ========== */}
-        <Route path="/admin/login" element={<AdminLogin />} />
-
-
-        {/* ========== Admin Panel ========== */}
-        <Route path="/admin" element={<AdminLayout />}>
+        {/* ========== Admin Panel (Admin/Super Admin Only) ========== */}
+        <Route path="/admin" element={
+          <RouteGuard allowedRoles={["admin"]}>
+            <AdminLayout />
+          </RouteGuard>
+        }>
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="owners" element={<AdminOwners />} />
           <Route path="fields" element={<AdminFields />} />
@@ -137,11 +174,12 @@ function AppLayout() {
           <Route path="settings" element={<AdminSettings />} />
           <Route path="activity" element={<AdminActivity />} />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="accounts" element={<AdminAccounts />} />
         </Route>
 
       </Routes>
 
-      {/* Show footer only for public pages that don't have their own */}
+      {/* Footer: ONLY for users/guests on public pages */}
       {!hideFooter && <Footer />}
     </>
   );

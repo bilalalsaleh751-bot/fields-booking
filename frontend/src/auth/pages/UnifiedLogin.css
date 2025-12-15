@@ -1,0 +1,157 @@
+.unified-login-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #60a5fa 100%);
+  padding: 20px;
+}
+
+.unified-login-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 40px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+.unified-login-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.unified-login-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: #0f172a;
+}
+
+.unified-login-logo .logo-circle {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #fff;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.unified-login-logo span {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.unified-login-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 8px;
+  text-align: center;
+}
+
+.unified-login-subtitle {
+  font-size: 15px;
+  color: #64748b;
+  margin: 0 0 28px;
+  text-align: center;
+}
+
+.unified-login-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.unified-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.unified-login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.unified-login-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.unified-login-field input {
+  padding: 12px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 15px;
+  transition: border-color 0.2s;
+}
+
+.unified-login-field input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.unified-login-btn {
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 8px;
+}
+
+.unified-login-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
+}
+
+.unified-login-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.unified-login-footer {
+  margin-top: 28px;
+  text-align: center;
+}
+
+.unified-login-footer p {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+}
+
+.unified-login-link {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.unified-login-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .unified-login-card {
+    padding: 28px 24px;
+  }
+}
+

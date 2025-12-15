@@ -24,7 +24,8 @@ function Sidebar() {
     localStorage.removeItem("ownerToken");
     localStorage.removeItem("ownerName");
     localStorage.removeItem("ownerId");
-    navigate("/");
+    localStorage.removeItem("ownerRole");
+    navigate("/login");
   };
 
   return (

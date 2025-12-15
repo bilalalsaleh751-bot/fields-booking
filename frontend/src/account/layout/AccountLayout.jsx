@@ -31,6 +31,9 @@ export default function AccountLayout() {
       {/* Header */}
       <header className="account-header">
         <div className="account-header-left">
+          <Link to="/" className="account-back-btn" title="Back to Website">
+            ← Back
+          </Link>
           <Link to="/" className="account-logo">
             <div className="logo-circle">SL</div>
             <span>Sport Lebanon</span>
@@ -63,4 +66,3 @@ export default function AccountLayout() {
     </div>
   );
 }
-

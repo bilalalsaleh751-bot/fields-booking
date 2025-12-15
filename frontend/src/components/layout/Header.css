@@ -1,11 +1,12 @@
-/* Header Styles */
+/* Header Styles - Professional SaaS Look */
 
 .main-header {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: #fff;
-  border-bottom: 1px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
 }
 
 .header-container {
@@ -14,45 +15,49 @@
   justify-content: space-between;
   max-width: 1400px;
   margin: 0 auto;
-  padding: 12px 24px;
+  padding: 14px 32px;
+  gap: 24px;
 }
 
 /* Logo */
 .logo-area {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   text-decoration: none;
+  flex-shrink: 0;
 }
 
 .logo-circle {
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   color: #fff;
-  border-radius: 10px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
   font-size: 14px;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
 }
 
 .logo-text {
   font-size: 18px;
   font-weight: 700;
   color: #0f172a;
+  letter-spacing: -0.02em;
 }
 
 /* Navigation */
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 }
 
 .nav-link {
-  padding: 10px 16px;
+  padding: 10px 18px;
   font-size: 14px;
   font-weight: 500;
   color: #475569;
@@ -71,13 +76,14 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .btn-outline {
-  padding: 10px 20px;
+  padding: 10px 22px;
   background: transparent;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
   color: #475569;
@@ -89,24 +95,26 @@
 .btn-outline:hover {
   border-color: #2563eb;
   color: #2563eb;
+  background: #eff6ff;
 }
 
 .btn-solid {
-  padding: 10px 20px;
+  padding: 10px 22px;
   background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
   color: #fff;
   text-decoration: none;
   cursor: pointer;
   transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
 }
 
 .btn-solid:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
 }
 
 /* User Menu */
@@ -117,15 +125,15 @@
 .user-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px 6px 6px;
+  gap: 10px;
+  padding: 6px 14px 6px 6px;
 }
 
 .user-avatar {
-  width: 28px;
-  height: 28px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 6px;
+  width: 30px;
+  height: 30px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -134,7 +142,7 @@
 }
 
 .user-name {
-  max-width: 100px;
+  max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -143,18 +151,18 @@
 .dropdown-arrow {
   font-size: 8px;
   opacity: 0.7;
+  margin-left: 2px;
 }
 
 /* Dropdown */
 .user-dropdown {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 10px);
   right: 0;
-  min-width: 200px;
+  min-width: 220px;
   background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05);
   overflow: hidden;
   animation: dropdownFade 0.15s ease;
 }
@@ -173,9 +181,9 @@
 .dropdown-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  padding: 12px 16px;
+  padding: 14px 18px;
   font-size: 14px;
   color: #334155;
   text-decoration: none;
@@ -200,15 +208,43 @@
 
 .dropdown-icon {
   font-size: 16px;
+  width: 20px;
+  text-align: center;
 }
 
 .dropdown-divider {
   height: 1px;
   background: #e2e8f0;
-  margin: 4px 0;
+  margin: 6px 0;
 }
 
 /* Responsive */
+@media (max-width: 900px) {
+  .header-container {
+    padding: 12px 20px;
+    gap: 16px;
+  }
+
+  .nav-links {
+    gap: 2px;
+  }
+
+  .nav-link {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .btn-outline {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .btn-solid {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+}
+
 @media (max-width: 768px) {
   .header-container {
     padding: 10px 16px;
@@ -231,7 +267,10 @@
   }
 
   .user-btn {
-    padding: 6px;
+    padding: 6px 8px 6px 6px;
+  }
+
+  .dropdown-arrow {
+    display: none;
   }
 }
-

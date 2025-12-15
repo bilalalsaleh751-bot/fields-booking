@@ -36,7 +36,7 @@ function AdminFinancial() {
 
       if (!overviewRes.ok || !transactionsRes.ok) {
         if (overviewRes.status === 401 || transactionsRes.status === 401) {
-          navigate("/admin/login");
+          navigate("/login");
           return;
         }
         throw new Error("Failed to fetch financial data");

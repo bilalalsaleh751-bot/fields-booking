@@ -27,12 +27,14 @@ function AdminSidebar() {
     { label: "Notifications", icon: "🔔", path: "/admin/notifications" },
     { label: "Settings", icon: "⚙️", path: "/admin/settings" },
     { label: "Activity Logs", icon: "📋", path: "/admin/activity" },
+    { label: "Accounts", icon: "🛡️", path: "/admin/accounts" },
   ];
 
   const handleLogout = () => {
     localStorage.removeItem("adminToken");
     localStorage.removeItem("adminData");
-    navigate("/admin/login");
+    localStorage.removeItem("adminRole");
+    navigate("/login");
   };
 
   const roleLabels = {

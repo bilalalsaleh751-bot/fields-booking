@@ -61,6 +61,36 @@ const emptyFormState = {
   isActive: true,
 };
 
+// Predefined options for dropdowns (no free text)
+const SPORT_TYPES = [
+  "Football",
+  "Basketball",
+  "Tennis",
+  "Volleyball",
+  "Padel",
+  "Swimming",
+  "Squash",
+  "Badminton",
+  "Cricket",
+  "Rugby",
+  "Multi-Purpose",
+];
+
+const SURFACE_TYPES = [
+  "Natural Grass",
+  "Artificial Turf",
+  "Indoor Court",
+  "Hard Court",
+  "Clay",
+  "Sand",
+  "Wood",
+  "Concrete",
+];
+
+const MAX_PLAYERS_OPTIONS = [4, 5, 6, 7, 8, 10, 11, 12, 14, 16, 20, 22];
+
+const PRICE_RANGES = [10, 15, 20, 25, 30, 35, 40, 50, 60, 75, 100, 125, 150, 200];
+
 function OwnerFields() {
   const location = useLocation();
   
@@ -68,6 +98,9 @@ function OwnerFields() {
   const [ownerId, setOwnerId] = useState("");
   const [fields, setFields] = useState([]);
   const [loadingFields, setLoadingFields] = useState(true);
+  
+  // Cities for dropdown
+  const [cities, setCities] = useState([]);
 
   // Unified mode: "list" | "create" | "edit"
   const [mode, setMode] = useState("list");
@@ -135,6 +168,12 @@ function OwnerFields() {
     const storedId = localStorage.getItem("ownerId");
     if (storedName) setOwnerName(storedName);
     if (storedId) setOwnerId(storedId);
+    
+    // Fetch cities for dropdown
+    fetch("http://localhost:5000/api/public/cities")
+      .then((res) => res.json())
+      .then((data) => setCities(data.cities || []))
+      .catch(() => {});
   }, []);
 
   const getToken = () => localStorage.getItem("ownerToken") || "";
@@ -571,21 +610,59 @@ function OwnerFields() {
               </div>
               <div>
                 <label style={labelStyle}>Sport Type *</label>
-                <input style={inputStyle} value={form.sportType} onChange={(e) => setForm({ ...form, sportType: e.target.value })} required placeholder="e.g., Football, Basketball" />
+                <select 
+                  style={inputStyle} 
+                  value={form.sportType} 
+                  onChange={(e) => setForm({ ...form, sportType: e.target.value })} 
+                  required
+                >
+                  <option value="">Select sport type</option>
+                  {SPORT_TYPES.map((sport) => (
+                    <option key={sport} value={sport}>{sport}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label style={labelStyle}>Price/Hour (USD) *</label>
-                <input style={inputStyle} type="number" min="0" step="0.01" value={form.pricePerHour} onChange={(e) => setForm({ ...form, pricePerHour: e.target.value })} required />
+                <select 
+                  style={inputStyle} 
+                  value={form.pricePerHour} 
+                  onChange={(e) => setForm({ ...form, pricePerHour: e.target.value })} 
+                  required
+                >
+                  <option value="">Select price</option>
+                  {PRICE_RANGES.map((price) => (
+                    <option key={price} value={price}>${price}/hr</option>
+                  ))}
+                </select>
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
               <div>
                 <label style={labelStyle}>Surface Type</label>
-                <input style={inputStyle} value={form.surfaceType} onChange={(e) => setForm({ ...form, surfaceType: e.target.value })} placeholder="e.g., Grass, Turf" />
+                <select 
+                  style={inputStyle} 
+                  value={form.surfaceType} 
+                  onChange={(e) => setForm({ ...form, surfaceType: e.target.value })}
+                >
+                  <option value="">Select surface type</option>
+                  {SURFACE_TYPES.map((surface) => (
+                    <option key={surface} value={surface}>{surface}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label style={labelStyle}>Max Players</label>
-                <input style={inputStyle} type="number" min="1" value={form.maxPlayers} onChange={(e) => setForm({ ...form, maxPlayers: e.target.value })} />
+                <select 
+                  style={inputStyle} 
+                  value={form.maxPlayers} 
+                  onChange={(e) => setForm({ ...form, maxPlayers: e.target.value })}
+                >
+                  <option value="">Select max players</option>
+                  {MAX_PLAYERS_OPTIONS.map((num) => (
+                    <option key={num} value={num}>{num} players</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label style={labelStyle}>Type</label>
@@ -606,16 +683,40 @@ function OwnerFields() {
             <h3 style={sectionTitleStyle}>📍 Location <span style={{ color: "#dc2626", fontSize: 12 }}>*Required</span></h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
               <div>
-                <label style={labelStyle}>City</label>
-                <input style={inputStyle} value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="e.g., Beirut" />
+                <label style={labelStyle}>City *</label>
+                <select 
+                  style={inputStyle} 
+                  value={form.city} 
+                  onChange={(e) => setForm({ ...form, city: e.target.value, area: "" })}
+                  required
+                >
+                  <option value="">Select city</option>
+                  {cities.map((city) => (
+                    <option key={city._id} value={city.name}>{city.name}</option>
+                  ))}
+                </select>
               </div>
               <div>
-                <label style={labelStyle}>Area</label>
-                <input style={inputStyle} value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} placeholder="e.g., Downtown" />
+                <label style={labelStyle}>Area *</label>
+                <select 
+                  style={inputStyle} 
+                  value={form.area} 
+                  onChange={(e) => setForm({ ...form, area: e.target.value })}
+                  required
+                  disabled={!form.city}
+                >
+                  <option value="">Select area</option>
+                  {cities
+                    .find((c) => c.name === form.city)
+                    ?.areas?.filter((a) => a.isActive)
+                    .map((area) => (
+                      <option key={area._id} value={area.name}>{area.name}</option>
+                    ))}
+                </select>
               </div>
               <div>
-                <label style={labelStyle}>Address</label>
-                <input style={inputStyle} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Street address" />
+                <label style={labelStyle}>Street Address</label>
+                <input style={inputStyle} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Street address (optional)" />
               </div>
             </div>
             <div>

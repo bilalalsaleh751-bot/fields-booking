@@ -1,6 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import "./AccountPages.css";
+
+// Status labels with Arabic translations
+const STATUS_LABELS = {
+  pending: { en: "Pending", ar: "قيد الانتظار", color: "#f59e0b" },
+  confirmed: { en: "Confirmed", ar: "مؤكد", color: "#3b82f6" },
+  completed: { en: "Completed", ar: "مكتمل", color: "#22c55e" },
+  cancelled: { en: "Cancelled", ar: "ملغي", color: "#ef4444" },
+};
 
 export default function AccountBookings() {
   const [bookings, setBookings] = useState([]);
@@ -10,18 +18,23 @@ export default function AccountBookings() {
   const [toast, setToast] = useState(null);
   const [reviewModal, setReviewModal] = useState(null);
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: "" });
+  const pollIntervalRef = useRef(null);
 
   const showToast = (type, message) => {
     setToast({ type, message });
     setTimeout(() => setToast(null), 3000);
   };
 
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async (showLoader = false) => {
+    if (showLoader) setLoading(true);
     try {
       const token = localStorage.getItem("userToken");
       const res = await fetch(
         `http://localhost:5000/api/users/bookings?type=${activeTab}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { 
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store" // Prevent caching
+        }
       );
 
       if (res.ok) {
@@ -33,12 +46,36 @@ export default function AccountBookings() {
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    setLoading(true);
-    fetchBookings();
   }, [activeTab]);
+
+  // Initial fetch and polling setup
+  useEffect(() => {
+    fetchBookings(true);
+
+    // Set up polling every 25 seconds
+    pollIntervalRef.current = setInterval(() => {
+      fetchBookings(false);
+    }, 25000);
+
+    // Cleanup on unmount or tab change
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, [activeTab, fetchBookings]);
+
+  // Refetch when page becomes visible (user returns to tab)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchBookings(false);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [fetchBookings]);
 
   const handleCancel = async (bookingId) => {
     if (!confirm("Are you sure you want to cancel this booking?")) return;
@@ -58,7 +95,14 @@ export default function AccountBookings() {
 
       if (res.ok) {
         showToast("success", "Booking cancelled successfully");
-        fetchBookings();
+        // Immediate update
+        setBookings((prev) =>
+          prev.map((b) =>
+            b._id === bookingId ? { ...b, status: "cancelled" } : b
+          )
+        );
+        // Also refetch to ensure consistency
+        fetchBookings(false);
       } else {
         showToast("error", data.message || "Failed to cancel booking");
       }
@@ -93,7 +137,7 @@ export default function AccountBookings() {
         showToast("success", "Review submitted successfully");
         setReviewModal(null);
         setReviewForm({ rating: 5, comment: "" });
-        fetchBookings();
+        fetchBookings(false);
       } else {
         showToast("error", data.message || "Failed to submit review");
       }
@@ -114,7 +158,6 @@ export default function AccountBookings() {
 
       if (res.ok) {
         const data = await res.json();
-        // Create printable receipt
         const receiptWindow = window.open("", "_blank");
         receiptWindow.document.write(`
           <!DOCTYPE html>
@@ -184,6 +227,18 @@ export default function AccountBookings() {
       month: "short",
       day: "numeric",
     });
+  };
+
+  const getStatusBadge = (status) => {
+    const statusInfo = STATUS_LABELS[status] || STATUS_LABELS.pending;
+    return (
+      <span
+        className={`status-badge ${status}`}
+        style={{ backgroundColor: `${statusInfo.color}15`, color: statusInfo.color, borderColor: statusInfo.color }}
+      >
+        {statusInfo.en} / {statusInfo.ar}
+      </span>
+    );
   };
 
   if (loading) {
@@ -279,9 +334,7 @@ export default function AccountBookings() {
                 </div>
 
                 <div className="booking-status">
-                  <span className={`status-badge ${booking.status}`}>
-                    {booking.status}
-                  </span>
+                  {getStatusBadge(booking.status)}
                   {booking.review?.rating && (
                     <span className="reviewed-badge">⭐ Reviewed</span>
                   )}
@@ -289,7 +342,7 @@ export default function AccountBookings() {
               </div>
 
               <div className="booking-actions">
-                {activeTab === "upcoming" && booking.status !== "cancelled" && (
+                {activeTab === "upcoming" && booking.status !== "cancelled" && booking.status !== "completed" && (
                   <button
                     className="action-btn cancel"
                     onClick={() => handleCancel(booking._id)}
@@ -308,7 +361,7 @@ export default function AccountBookings() {
                       Receipt
                     </button>
 
-                    {!booking.review?.rating && booking.status !== "cancelled" && (
+                    {!booking.review?.rating && booking.status === "completed" && (
                       <button
                         className="action-btn primary"
                         onClick={() => setReviewModal(booking)}
@@ -374,4 +427,3 @@ export default function AccountBookings() {
     </div>
   );
 }
-
