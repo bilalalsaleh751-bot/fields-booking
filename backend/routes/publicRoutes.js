@@ -3,8 +3,10 @@ import CMSBanner from "../models/CMSBanner.js";
 import FAQ from "../models/FAQ.js";
 import Category from "../models/Category.js";
 import City from "../models/City.js";
+import SportType from "../models/SportType.js";
 import HomepageContent from "../models/HomepageContent.js";
 import FooterContent from "../models/FooterContent.js";
+import DiscoverContent from "../models/DiscoverContent.js";
 import PlatformSettings from "../models/PlatformSettings.js";
 
 const router = express.Router();
@@ -39,6 +41,26 @@ router.get("/homepage", async (req, res) => {
     });
   } catch (err) {
     console.error("Get homepage error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Get discover page content
+router.get("/discover", async (req, res) => {
+  try {
+    const [content, sportTypes, settings] = await Promise.all([
+      DiscoverContent.getContent(),
+      SportType.find({ isActive: true }).sort({ sortOrder: 1, name: 1 }),
+      PlatformSettings.getSettings(),
+    ]);
+    
+    res.json({
+      content,
+      sportTypes,
+      platformName: settings.platformName,
+    });
+  } catch (err) {
+    console.error("Get discover content error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -117,6 +139,17 @@ router.get("/cities", async (req, res) => {
     res.json({ cities });
   } catch (err) {
     console.error("Get public cities error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Get active sport types
+router.get("/sport-types", async (req, res) => {
+  try {
+    const sportTypes = await SportType.find({ isActive: true }).sort({ sortOrder: 1, name: 1 });
+    res.json({ sportTypes });
+  } catch (err) {
+    console.error("Get public sport types error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });

@@ -22,8 +22,7 @@ function AdminDashboard() {
 
       if (!res.ok) {
         if (res.status === 401) {
-          localStorage.removeItem("adminToken");
-          navigate("/admin/login");
+          // AuthContext will handle logout
           return;
         }
         throw new Error("Failed to fetch dashboard");

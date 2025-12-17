@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { Outlet, NavLink, useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
 import "./AccountLayout.css";
 
 export default function AccountLayout() {
   const navigate = useNavigate();
+  const { hasSession, logoutCurrentRole, switchRole, sessions } = useAuth();
   const [userName, setUserName] = useState("");
 
   useEffect(() => {
@@ -19,11 +21,20 @@ export default function AccountLayout() {
   }, [navigate]);
 
   const handleLogout = () => {
+    // Clear only user session tokens
     localStorage.removeItem("userToken");
     localStorage.removeItem("userId");
     localStorage.removeItem("userName");
     localStorage.removeItem("userEmail");
-    navigate("/");
+    
+    // If user was the active role, clear authRole
+    const currentRole = localStorage.getItem("authRole");
+    if (currentRole === "user") {
+      localStorage.removeItem("authRole");
+    }
+    
+    // Navigate to USER login page
+    navigate("/login", { replace: true });
   };
 
   return (

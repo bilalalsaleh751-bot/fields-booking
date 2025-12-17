@@ -84,14 +84,20 @@ export const createBooking = async (req, res) => {
       
       // Validate time is within opening hours
       const openHour = parseInt(field.openingHours?.open?.split(":")[0] || "8", 10);
-      const closeHour = parseInt(field.openingHours?.close?.split(":")[0] || "23", 10);
+      let closeHour = parseInt(field.openingHours?.close?.split(":")[0] || "23", 10);
+      
+      // Handle midnight (00:00) as 24:00 for calculations
+      if (closeHour === 0 || closeHour < openHour) {
+        closeHour = 24;
+      }
+      
       const openMin = openHour * 60;
       const closeMin = closeHour * 60;
 
       if (newRange.start < openMin || newRange.end > closeMin) {
         await session.abortTransaction();
         return res.status(400).json({ 
-          message: `Booking must be within operating hours (${openHour}:00 - ${closeHour}:00)` 
+          message: `Booking must be within operating hours (${openHour}:00 - ${closeHour === 24 ? '00' : closeHour}:00)` 
         });
       }
 

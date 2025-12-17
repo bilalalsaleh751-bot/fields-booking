@@ -6,12 +6,12 @@ import BookingsTable from "../components/BookingsTable";
 import FinancialOverview from "../components/FinancialOverview";
 import ReviewsPanel from "../components/ReviewsPanel";
 
-import { useEffect, useState, useCallback } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useLocation } from "react-router-dom";
 
 function OwnerDashboard() {
-  const navigate = useNavigate();
   const location = useLocation();
+  const abortControllerRef = useRef(null);
 
   const [ownerName, setOwnerName] = useState("");
   const [ownerId, setOwnerId] = useState("");
@@ -25,31 +25,44 @@ function OwnerDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Auth check
+  // Get owner info directly from localStorage (path-based auth)
+  // This ensures each tab loads its own session data independently
   useEffect(() => {
-    const token = localStorage.getItem("ownerToken");
+    const storedToken = localStorage.getItem("ownerToken");
     const storedName = localStorage.getItem("ownerName");
     const storedId = localStorage.getItem("ownerId");
 
-    if (!token) {
-      navigate("/owner/login");
+    // If no owner token, the RouteGuard should redirect
+    // But double-check here for safety
+    if (!storedToken) {
+      console.warn("No owner token found, should be redirected by RouteGuard");
       return;
     }
 
     if (storedName) setOwnerName(storedName);
     if (storedId) setOwnerId(storedId);
-  }, [navigate]);
+  }, []);
 
-  // Fetch dashboard data function (reusable)
+  // Fetch dashboard data function with abort controller for cleanup
   const fetchDashboard = useCallback(async () => {
     if (!ownerId) return;
+    
+    // Cancel any previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    abortControllerRef.current = new AbortController();
     
     try {
       setLoading(true);
 
       const res = await fetch(
         `http://localhost:5000/api/owner/dashboard/overview?ownerId=${ownerId}`,
-        { cache: "no-store" } // Always fetch fresh data
+        { 
+          cache: "no-store",
+          signal: abortControllerRef.current.signal 
+        }
       );
       const data = await res.json();
 
@@ -60,12 +73,23 @@ function OwnerDashboard() {
       setFinancial(data.financial);
       setReviews(data.reviews || []);
       setError("");
-    } catch {
+    } catch (err) {
+      // Don't show error if request was aborted
+      if (err.name === "AbortError") return;
       setError("Failed to load dashboard data.");
     } finally {
       setLoading(false);
     }
   }, [ownerId]);
+  
+  // Cleanup abort controller on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   // Refresh trigger state - updated when booking actions occur
   const [refreshKey, setRefreshKey] = useState(0);

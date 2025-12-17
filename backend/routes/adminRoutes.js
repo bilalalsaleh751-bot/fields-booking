@@ -40,8 +40,12 @@ import {
   getPromoCodes, createPromoCode, updatePromoCode, deletePromoCode,
   getHomepageContent, updateHomepageContent,
   getFooterContent, updateFooterContent,
+  getDiscoverContent, updateDiscoverContent,
   uploadCMSImage,
 } from "../controllers/adminCMSController.js";
+import {
+  getSportTypes, createSportType, updateSportType, deleteSportType,
+} from "../controllers/adminSportTypeController.js";
 import { upload } from "../utils/upload.js";
 import {
   getTemplates, createTemplate, updateTemplate, deleteTemplate,
@@ -163,12 +167,22 @@ router.delete("/cms/promo-codes/:id", requirePermission("manage_cms"), deletePro
 router.get("/cms/homepage", requirePermission("view_dashboard"), getHomepageContent);
 router.put("/cms/homepage", requirePermission("manage_cms"), updateHomepageContent);
 
+// Discover Page Content
+router.get("/cms/discover", requirePermission("view_dashboard"), getDiscoverContent);
+router.put("/cms/discover", requirePermission("manage_cms"), updateDiscoverContent);
+
 // Footer Content
 router.get("/cms/footer", requirePermission("view_dashboard"), getFooterContent);
 router.put("/cms/footer", requirePermission("manage_cms"), updateFooterContent);
 
 // CMS Image Upload
 router.post("/cms/upload", requirePermission("manage_cms"), upload.single("image"), uploadCMSImage);
+
+// Sport Types
+router.get("/cms/sport-types", requirePermission("view_dashboard"), getSportTypes);
+router.post("/cms/sport-types", requirePermission("manage_cms"), createSportType);
+router.put("/cms/sport-types/:id", requirePermission("manage_cms"), updateSportType);
+router.delete("/cms/sport-types/:id", requirePermission("manage_cms"), deleteSportType);
 
 // ============================================================
 // NOTIFICATIONS

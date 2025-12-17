@@ -1,58 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
 import "./Header.css";
 
 const Header = () => {
   const navigate = useNavigate();
-  const [authState, setAuthState] = useState({
-    isUser: false,
-    name: "",
-  });
+  const { auth, logout } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef(null);
-
-  // Check auth state on mount - ONLY for users, never admin/owner
-  useEffect(() => {
-    checkAuthState();
-    
-    // Listen for storage changes (logout from other tabs)
-    const handleStorageChange = () => {
-      checkAuthState();
-    };
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
-
-  const checkAuthState = () => {
-    const userToken = localStorage.getItem("userToken");
-    const ownerToken = localStorage.getItem("ownerToken");
-    const adminToken = localStorage.getItem("adminToken");
-
-    // CRITICAL: Header should ONLY show for users or guests
-    // If admin or owner token exists, do NOT show header menu
-    if (adminToken || ownerToken) {
-      // Admin/Owner logged in - they should not see this header
-      // This should never happen due to route guards, but as safety:
-      setAuthState({
-        isUser: false,
-        name: "",
-      });
-      return;
-    }
-
-    // Only show user menu if user token exists
-    if (userToken) {
-      setAuthState({
-        isUser: true,
-        name: localStorage.getItem("userName") || "User",
-      });
-    } else {
-      setAuthState({
-        isUser: false,
-        name: "",
-      });
-    }
-  };
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -66,19 +21,15 @@ const Header = () => {
   }, []);
 
   const handleLogout = () => {
-    // Clear user auth tokens only
-    localStorage.removeItem("userToken");
-    localStorage.removeItem("userId");
-    localStorage.removeItem("userName");
-    localStorage.removeItem("userEmail");
-    
-    setAuthState({
-      isUser: false,
-      name: "",
-    });
+    // CRITICAL: Use AuthContext logout to clear ALL auth data including authRole
+    logout();
     setShowUserMenu(false);
     navigate("/");
   };
+
+  // Determine if user is logged in (only for regular users, not admin/owner)
+  const isUser = auth?.role === "user";
+  const userName = auth?.name || localStorage.getItem("userName") || "User";
 
   return (
     <header className="main-header">
@@ -99,7 +50,7 @@ const Header = () => {
             Book Now
           </Link>
 
-          {!authState.isUser ? (
+          {!isUser ? (
             // NOT LOGGED IN - Show Login button
             <Link to="/login" className="btn-solid">
               Login
@@ -112,9 +63,9 @@ const Header = () => {
                 onClick={() => setShowUserMenu(!showUserMenu)}
               >
                 <span className="user-avatar">
-                  {authState.name.charAt(0).toUpperCase()}
+                  {userName.charAt(0).toUpperCase()}
                 </span>
-                <span className="user-name">{authState.name}</span>
+                <span className="user-name">{userName}</span>
                 <span className="dropdown-arrow">▼</span>
               </button>
 

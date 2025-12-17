@@ -1,9 +1,10 @@
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from "react-router-dom";
+import { useAuth } from "./contexts/AuthContext";
 
 // ========== Layout Components ==========
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
-import RouteGuard from "./components/auth/RouteGuard";
+import RequireAuth, { RequireRole, PublicRoute } from "./components/auth/RequireAuth";
 
 // ========== Main Website Pages ==========
 import Home from "./pages/Home";
@@ -58,11 +59,7 @@ import AdminAccounts from "./admin/pages/AdminAccounts";
 // =====================================
 function AppLayout() {
   const location = useLocation();
-
-  // Check for admin/owner tokens - THEY NEVER SEE HEADER/FOOTER
-  const adminToken = localStorage.getItem("adminToken");
-  const ownerToken = localStorage.getItem("ownerToken");
-  const userToken = localStorage.getItem("userToken");
+  const { auth } = useAuth();
   
   // Route detection
   const isOwnerRoute = location.pathname.startsWith("/owner");
@@ -74,7 +71,7 @@ function AppLayout() {
   
   // CRITICAL: Admin and Owner NEVER see header
   // Header only shown for: guests or users on public pages
-  const isAdminOrOwner = adminToken || ownerToken;
+  const isAdminOrOwner = auth && (auth.role === "admin" || auth.role === "super_admin" || auth.role === "owner");
   const hideHeader = isAdminOrOwner || isOwnerRoute || isAdminRoute || isAccountRoute || isAuthPage;
   
   // Footer shown only for public pages that don't have their own footer
@@ -87,31 +84,11 @@ function AppLayout() {
 
       <Routes>
         {/* ========== Main Website (Users/Guests Only) ========== */}
-        <Route path="/" element={
-          <RouteGuard allowedRoles={[]}>
-            <Home />
-          </RouteGuard>
-        } />
-        <Route path="/discover" element={
-          <RouteGuard allowedRoles={[]}>
-            <Discover />
-          </RouteGuard>
-        } />
-        <Route path="/field/:id" element={
-          <RouteGuard allowedRoles={[]}>
-            <FieldDetails />
-          </RouteGuard>
-        } />
-        <Route path="/booking/:fieldId" element={
-          <RouteGuard allowedRoles={[]}>
-            <BookingFlow />
-          </RouteGuard>
-        } />
-        <Route path="/faq" element={
-          <RouteGuard allowedRoles={[]}>
-            <FAQ />
-          </RouteGuard>
-        } />
+        <Route path="/" element={<PublicRoute><Home /></PublicRoute>} />
+        <Route path="/discover" element={<PublicRoute><Discover /></PublicRoute>} />
+        <Route path="/field/:id" element={<PublicRoute><FieldDetails /></PublicRoute>} />
+        <Route path="/booking/:fieldId" element={<PublicRoute><BookingFlow /></PublicRoute>} />
+        <Route path="/faq" element={<PublicRoute><FAQ /></PublicRoute>} />
 
 
         {/* ========== UNIFIED Authentication (Single Login) ========== */}
@@ -127,9 +104,9 @@ function AppLayout() {
 
         {/* ========== User Account (Users Only) ========== */}
         <Route path="/account" element={
-          <RouteGuard allowedRoles={["user"]}>
+          <RequireRole allowedRoles={["user"]}>
             <AccountLayout />
-          </RouteGuard>
+          </RequireRole>
         }>
           <Route path="bookings" element={<AccountBookings />} />
           <Route path="profile" element={<AccountProfile />} />
@@ -145,9 +122,9 @@ function AppLayout() {
 
         {/* ========== Owner Panel (Owners Only) ========== */}
         <Route path="/owner" element={
-          <RouteGuard allowedRoles={["owner"]}>
+          <RequireRole allowedRoles={["owner"]}>
             <OwnerLayout />
-          </RouteGuard>
+          </RequireRole>
         }>
           <Route path="dashboard" element={<OwnerDashboard />} />
           <Route path="fields" element={<OwnerFields />} />
@@ -160,9 +137,9 @@ function AppLayout() {
 
         {/* ========== Admin Panel (Admin/Super Admin Only) ========== */}
         <Route path="/admin" element={
-          <RouteGuard allowedRoles={["admin"]}>
+          <RequireRole allowedRoles={["admin"]}>
             <AdminLayout />
-          </RouteGuard>
+          </RequireRole>
         }>
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="owners" element={<AdminOwners />} />

@@ -4,6 +4,14 @@ import { useLocation } from "react-router-dom";
 import DashboardHeader from "../components/DashboardHeader";
 import MapPicker from "../components/MapPicker";
 import AvailabilityCalendar from "../components/AvailabilityCalendar";
+import {
+  SPORT_TYPES,
+  SURFACE_TYPES,
+  CITIES_LIST,
+  MAX_PLAYERS_OPTIONS,
+  PRICE_RANGES,
+  AMENITIES,
+} from "../../constants/filterOptions";
 import "../dashboard.css";
 
 const inputStyle = {
@@ -61,36 +69,6 @@ const emptyFormState = {
   isActive: true,
 };
 
-// Predefined options for dropdowns (no free text)
-const SPORT_TYPES = [
-  "Football",
-  "Basketball",
-  "Tennis",
-  "Volleyball",
-  "Padel",
-  "Swimming",
-  "Squash",
-  "Badminton",
-  "Cricket",
-  "Rugby",
-  "Multi-Purpose",
-];
-
-const SURFACE_TYPES = [
-  "Natural Grass",
-  "Artificial Turf",
-  "Indoor Court",
-  "Hard Court",
-  "Clay",
-  "Sand",
-  "Wood",
-  "Concrete",
-];
-
-const MAX_PLAYERS_OPTIONS = [4, 5, 6, 7, 8, 10, 11, 12, 14, 16, 20, 22];
-
-const PRICE_RANGES = [10, 15, 20, 25, 30, 35, 40, 50, 60, 75, 100, 125, 150, 200];
-
 function OwnerFields() {
   const location = useLocation();
   
@@ -98,9 +76,6 @@ function OwnerFields() {
   const [ownerId, setOwnerId] = useState("");
   const [fields, setFields] = useState([]);
   const [loadingFields, setLoadingFields] = useState(true);
-  
-  // Cities for dropdown
-  const [cities, setCities] = useState([]);
 
   // Unified mode: "list" | "create" | "edit"
   const [mode, setMode] = useState("list");
@@ -129,9 +104,11 @@ function OwnerFields() {
   
   // Open availability calendar from list view
   const openAvailabilityFromList = (field) => {
+    console.log("Opening availability for field:", field._id, field.name);
     setAvailabilityFieldId(field._id);
     setAvailabilityFieldData(field);
     setShowAvailabilityCalendar(true);
+    console.log("Availability calendar should now be visible");
   };
   
   // Validate form before submission
@@ -166,14 +143,9 @@ function OwnerFields() {
   useEffect(() => {
     const storedName = localStorage.getItem("ownerName");
     const storedId = localStorage.getItem("ownerId");
+    console.log("OwnerFields: Retrieved from localStorage - ownerId:", storedId, "ownerName:", storedName);
     if (storedName) setOwnerName(storedName);
     if (storedId) setOwnerId(storedId);
-    
-    // Fetch cities for dropdown
-    fetch("http://localhost:5000/api/public/cities")
-      .then((res) => res.json())
-      .then((data) => setCities(data.cities || []))
-      .catch(() => {});
   }, []);
 
   const getToken = () => localStorage.getItem("ownerToken") || "";
@@ -209,7 +181,10 @@ function OwnerFields() {
 
   // Switch to edit mode
   const handleEdit = (field) => {
-    setForm({
+    console.log("Editing field:", field._id, field.name);
+    
+    // Populate form with field data
+    const formData = {
       name: field.name || "",
       description: field.description || "",
       sportType: field.sportType || field.sport || "",
@@ -227,12 +202,18 @@ function OwnerFields() {
       currency: field.currency || "USD",
       location: field.location || { lat: "", lng: "" },
       isActive: field.isActive !== false,
-    });
+    };
+    
+    console.log("Form data:", formData);
+    
+    setForm(formData);
     setEditingFieldId(field._id);
     setEditingFieldData(field);
     setImagePreviews([]);
     setFormError(""); // Clear any previous errors
     setMode("edit");
+    
+    console.log("Mode set to edit");
   };
 
   // Cancel and go back to list
@@ -248,10 +229,12 @@ function OwnerFields() {
   // Save (create or update)
   const handleSave = async (e) => {
     e.preventDefault();
+    console.log("handleSave called, mode:", mode);
     setFormError(""); // Clear previous errors
     
     // Check owner ID
     if (!ownerId) {
+      console.error("No ownerId found");
       setFormError("Owner ID not found. Please log in again.");
       return;
     }
@@ -259,6 +242,7 @@ function OwnerFields() {
     // Validate form BEFORE submission
     const validationError = validateForm();
     if (validationError) {
+      console.error("Validation error:", validationError);
       setFormError(validationError);
       return;
     }
@@ -266,6 +250,7 @@ function OwnerFields() {
     try {
       setSaving(true);
       const token = getToken();
+      console.log("Token available:", !!token);
       
       // Prepare payload with proper location handling
       const payload = {
@@ -279,15 +264,18 @@ function OwnerFields() {
         },
       };
 
+      console.log("Payload:", payload);
 
       let res;
       if (mode === "create") {
+        console.log("Creating new field...");
         res = await fetch("http://localhost:5000/api/fields", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ownerId, ...payload }),
         });
       } else {
+        console.log("Updating field:", editingFieldId);
         res = await fetch(`http://localhost:5000/api/fields/${editingFieldId}`, {
           method: "PUT",
           headers: {
@@ -299,15 +287,19 @@ function OwnerFields() {
       }
 
       const data = await res.json();
+      console.log("Response:", res.status, data);
       
       if (res.ok && (res.status === 201 || res.status === 200)) {
+        console.log("Save successful");
         setFormError("");
         await fetchFields();
         handleCancel();
       } else {
+        console.error("Save failed:", data);
         setFormError(data.message || `Failed to save field (${res.status}). Please try again.`);
       }
     } catch (err) {
+      console.error("Save error:", err);
       setFormError("Network error. Please check your connection and try again.");
     } finally {
       setSaving(false);
@@ -316,13 +308,34 @@ function OwnerFields() {
 
   // Toggle field active status
   const toggleActive = async (fieldId, isActive) => {
-    const token = getToken();
-    const endpoint = isActive ? "deactivate" : "activate";
-    const res = await fetch(`http://localhost:5000/api/fields/${fieldId}/${endpoint}`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (res.ok) fetchFields();
+    try {
+      const token = getToken();
+      if (!token) {
+        alert("Please log in again - no authentication token found");
+        return;
+      }
+      
+      const endpoint = isActive ? "deactivate" : "activate";
+      console.log(`Toggling field ${fieldId} to ${endpoint}`);
+      
+      const res = await fetch(`http://localhost:5000/api/fields/${fieldId}/${endpoint}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        console.log(`Field ${endpoint}d successfully`);
+        fetchFields();
+      } else {
+        console.error("Toggle failed:", data);
+        alert(data.message || `Failed to ${endpoint} field`);
+      }
+    } catch (err) {
+      console.error("Toggle error:", err);
+      alert("Network error - please check your connection");
+    }
   };
 
   // Image handlers
@@ -687,32 +700,23 @@ function OwnerFields() {
                 <select 
                   style={inputStyle} 
                   value={form.city} 
-                  onChange={(e) => setForm({ ...form, city: e.target.value, area: "" })}
+                  onChange={(e) => setForm({ ...form, city: e.target.value })}
                   required
                 >
                   <option value="">Select city</option>
-                  {cities.map((city) => (
-                    <option key={city._id} value={city.name}>{city.name}</option>
+                  {CITIES_LIST.map((city) => (
+                    <option key={city} value={city}>{city}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>Area *</label>
-                <select 
+                <label style={labelStyle}>Area</label>
+                <input 
                   style={inputStyle} 
                   value={form.area} 
                   onChange={(e) => setForm({ ...form, area: e.target.value })}
-                  required
-                  disabled={!form.city}
-                >
-                  <option value="">Select area</option>
-                  {cities
-                    .find((c) => c.name === form.city)
-                    ?.areas?.filter((a) => a.isActive)
-                    .map((area) => (
-                      <option key={area._id} value={area.name}>{area.name}</option>
-                    ))}
-                </select>
+                  placeholder="Enter area name..."
+                />
               </div>
               <div>
                 <label style={labelStyle}>Street Address</label>

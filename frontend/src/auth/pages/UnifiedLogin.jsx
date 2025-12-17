@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
 import "./UnifiedLogin.css";
 
 export default function UnifiedLogin() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -33,45 +35,33 @@ export default function UnifiedLogin() {
       // Store auth data based on role
       const { token, user, role } = data;
 
-      // Clear any existing tokens first
-      localStorage.removeItem("userToken");
-      localStorage.removeItem("ownerToken");
-      localStorage.removeItem("adminToken");
-      localStorage.removeItem("userId");
-      localStorage.removeItem("ownerId");
-      localStorage.removeItem("userName");
-      localStorage.removeItem("ownerName");
-      localStorage.removeItem("adminData");
+      // Use AuthContext to store auth state
+      login(token, { ...user, role });
 
-      // Store based on role
+      // Redirect based on role
       if (role === "user") {
-        localStorage.setItem("userToken", token);
-        localStorage.setItem("userId", user._id);
-        localStorage.setItem("userName", user.name || "User");
-        localStorage.setItem("userEmail", user.email);
-        localStorage.setItem("userRole", "user");
         navigate("/");
       } else if (role === "owner") {
-        localStorage.setItem("ownerToken", token);
-        localStorage.setItem("ownerId", user._id);
-        localStorage.setItem("ownerName", user.fullName || user.name || "Owner");
-        localStorage.setItem("ownerRole", "owner");
-        
-        // Check if owner is approved
-        if (user.status === "pending") {
+        // Backend already validated status, handle routing based on status
+        // Normalize status to lowercase for case-insensitive comparison
+        const ownerStatus = (user.status || "").toLowerCase().trim();
+        if (ownerStatus === "pending" || ownerStatus === "pending_review") {
           navigate("/owner/pending");
-        } else if (user.status === "approved") {
+        } else if (ownerStatus === "approved") {
           navigate("/owner/dashboard");
         } else {
-          setError("Your account is not approved. Please contact support.");
+          // Fallback - should not reach here if backend validation is correct
+          console.error("Unexpected owner status:", user.status);
+          setError("Account status issue. Please contact support.");
+          setLoading(false);
+          return;
         }
       } else if (role === "admin" || role === "super_admin") {
-        localStorage.setItem("adminToken", token);
-        localStorage.setItem("adminData", JSON.stringify(user));
-        localStorage.setItem("adminRole", role);
         navigate("/admin/dashboard");
       } else {
         setError("Unknown role. Please contact support.");
+        setLoading(false);
+        return;
       }
     } catch (err) {
       console.error("Login error:", err);
@@ -103,7 +93,10 @@ export default function UnifiedLogin() {
               type="email"
               placeholder="your@email.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (error) setError(""); // Clear error on input change
+              }}
               required
             />
           </div>
@@ -114,7 +107,10 @@ export default function UnifiedLogin() {
               type="password"
               placeholder="Enter your password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (error) setError(""); // Clear error on input change
+              }}
               required
             />
           </div>

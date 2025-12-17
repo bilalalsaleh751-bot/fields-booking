@@ -1,19 +1,20 @@
 // src/dashboard/pages/OwnerBookings.jsx
 // PDR 2.4 - Booking Management (Step 2: Actions)
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import DashboardHeader from "../components/DashboardHeader";
 import "../dashboard.css";
 
 function OwnerBookings() {
   const location = useLocation();
+  const abortControllerRef = useRef(null);
 
   const [ownerName, setOwnerName] = useState("");
   const [ownerId, setOwnerId] = useState("");
 
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("upcoming"); // upcoming, past, cancelled
+  const [activeTab, setActiveTab] = useState("upcoming"); // upcoming, pending, past, cancelled
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   
@@ -24,9 +25,17 @@ function OwnerBookings() {
     return () => clearInterval(interval);
   }, []);
 
+  // Get owner info directly from localStorage (path-based auth)
+  // Each tab loads its own session data independently
   useEffect(() => {
+    const storedToken = localStorage.getItem("ownerToken");
     const storedName = localStorage.getItem("ownerName");
     const storedId = localStorage.getItem("ownerId");
+
+    if (!storedToken) {
+      console.warn("No owner token found");
+      return;
+    }
 
     if (storedName) setOwnerName(storedName);
     if (storedId) setOwnerId(storedId);
@@ -34,44 +43,77 @@ function OwnerBookings() {
 
   const fetchBookings = useCallback(async () => {
     if (!ownerId) return;
+    
+    // Cancel any previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    
     try {
       setLoading(true);
       const queryParams = new URLSearchParams({ ownerId });
 
       const res = await fetch(
         `http://localhost:5000/api/owner/bookings?${queryParams}`,
-        { cache: "no-store" }
+        { 
+          cache: "no-store",
+          signal: abortControllerRef.current.signal
+        }
       );
       const data = await res.json();
       if (res.ok) setBookings(data.bookings || []);
+    } catch (err) {
+      // Don't show error if request was aborted
+      if (err.name === "AbortError") return;
+      console.error("Error fetching bookings:", err);
     } finally {
       setLoading(false);
     }
   }, [ownerId]);
+  
+  // Cleanup abort controller on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   // Fetch bookings on mount and when navigating back
   useEffect(() => {
     fetchBookings();
   }, [fetchBookings, location.key]);
 
-  // Poll for new bookings every 25 seconds
+  // Poll for new bookings every 60 seconds (reduced frequency for better performance)
   useEffect(() => {
     if (!ownerId) return;
     const pollInterval = setInterval(() => {
       fetchBookings();
-    }, 25000);
+    }, 60000);
     return () => clearInterval(pollInterval);
   }, [ownerId, fetchBookings]);
 
   // Filter bookings by category
   const filteredBookings = useMemo(() => {
+    if (activeTab === "pending") {
+      // Show only pending status bookings from upcoming category
+      return bookings.filter((b) => b.status === "pending" && b.category === "upcoming");
+    }
+    if (activeTab === "upcoming") {
+      // Show confirmed upcoming bookings (exclude pending)
+      return bookings.filter((b) => b.category === "upcoming" && b.status !== "pending");
+    }
     return bookings.filter((b) => b.category === activeTab);
   }, [bookings, activeTab]);
 
   // Count bookings by category
   const counts = useMemo(() => {
+    const upcomingBookings = bookings.filter((b) => b.category === "upcoming");
     return {
-      upcoming: bookings.filter((b) => b.category === "upcoming").length,
+      upcoming: upcomingBookings.filter((b) => b.status !== "pending").length,
+      pending: upcomingBookings.filter((b) => b.status === "pending").length,
       past: bookings.filter((b) => b.category === "past").length,
       cancelled: bookings.filter((b) => b.category === "cancelled").length,
     };
@@ -132,8 +174,25 @@ function OwnerBookings() {
   }, []);
 
   // Helper: Check if booking can be confirmed (pending → confirmed)
+  // NOTE: This is now deprecated - we use canCompleteBooking for all completion actions
   const canConfirmBooking = useCallback((booking) => {
-    return booking.status === "pending";
+    // Only pending bookings that haven't started yet can be confirmed
+    // For bookings that have passed, we use complete instead
+    if (booking.status !== "pending") return false;
+    
+    // Check if booking hasn't started yet
+    const now = new Date();
+    const dateStr = booking.date;
+    if (!dateStr) return true;
+    
+    const [year, month, day] = dateStr.split("-").map(Number);
+    if (!year || !month || !day) return true;
+    
+    const [startH, startM = "0"] = (booking.startTime || "00:00").split(":").map(Number);
+    const bookingStartDateTime = new Date(year, month - 1, day, startH || 0, startM || 0, 0, 0);
+    
+    // Can confirm only if booking hasn't started
+    return now < bookingStartDateTime;
   }, []);
 
   // Handle booking action (complete or cancel)
@@ -260,7 +319,8 @@ function OwnerBookings() {
             }}
           >
             {[
-              { key: "upcoming", label: "Upcoming", count: counts.upcoming },
+              { key: "upcoming", label: "Confirmed", count: counts.upcoming },
+              { key: "pending", label: "Pending", count: counts.pending },
               { key: "past", label: "Past", count: counts.past },
               { key: "cancelled", label: "Cancelled", count: counts.cancelled },
             ].map((tab) => (
@@ -319,7 +379,9 @@ function OwnerBookings() {
             </h3>
             <p style={{ color: "#64748b", marginTop: 8 }}>
               {activeTab === "upcoming"
-                ? "You don't have any upcoming bookings yet."
+                ? "You don't have any confirmed upcoming bookings."
+                : activeTab === "pending"
+                ? "No pending bookings awaiting confirmation."
                 : activeTab === "past"
                 ? "No past bookings to display."
                 : "No cancelled bookings."}
@@ -402,28 +464,7 @@ function OwnerBookings() {
                           View
                         </button>
                         
-                        {/* Confirm button - only for pending bookings */}
-                        {canConfirmBooking(b) && (
-                          <button
-                            onClick={() => handleBookingAction(b._id, "confirm")}
-                            disabled={actionLoading}
-                            style={{
-                              padding: "6px 12px",
-                              fontSize: 12,
-                              borderRadius: 8,
-                              border: "none",
-                              background: "#3b82f6",
-                              color: "white",
-                              fontWeight: 500,
-                              cursor: actionLoading ? "not-allowed" : "pointer",
-                              opacity: actionLoading ? 0.6 : 1,
-                            }}
-                          >
-                            Confirm
-                          </button>
-                        )}
-                        
-                        {/* Complete button - only for confirmed bookings after end time */}
+                        {/* Complete button - for confirmed/pending bookings after end time */}
                         {canCompleteBooking(b) && (
                           <button
                             onClick={() => handleBookingAction(b._id, "complete")}
@@ -441,6 +482,27 @@ function OwnerBookings() {
                             }}
                           >
                             Complete
+                          </button>
+                        )}
+                        
+                        {/* Confirm button - only for pending bookings that haven't started */}
+                        {canConfirmBooking(b) && !canCompleteBooking(b) && (
+                          <button
+                            onClick={() => handleBookingAction(b._id, "confirm")}
+                            disabled={actionLoading}
+                            style={{
+                              padding: "6px 12px",
+                              fontSize: 12,
+                              borderRadius: 8,
+                              border: "none",
+                              background: "#3b82f6",
+                              color: "white",
+                              fontWeight: 500,
+                              cursor: actionLoading ? "not-allowed" : "pointer",
+                              opacity: actionLoading ? 0.6 : 1,
+                            }}
+                          >
+                            Confirm
                           </button>
                         )}
                         
@@ -759,23 +821,7 @@ function OwnerBookings() {
 
               {/* Action Buttons */}
               <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
-                {/* Confirm button - for pending bookings */}
-                {canConfirmBooking(selectedBooking) && (
-                  <button
-                    onClick={() => handleBookingAction(selectedBooking._id, "confirm")}
-                    disabled={actionLoading}
-                    className="dashboard-primary-btn"
-                    style={{
-                      flex: 1,
-                      background: "#3b82f6",
-                      opacity: actionLoading ? 0.6 : 1,
-                    }}
-                  >
-                    {actionLoading ? "Processing..." : "Confirm Booking"}
-                  </button>
-                )}
-
-                {/* Complete button */}
+                {/* Complete button - primary action for bookings after end time */}
                 {canCompleteBooking(selectedBooking) && (
                   <button
                     onClick={() => handleBookingAction(selectedBooking._id, "complete")}
@@ -788,6 +834,22 @@ function OwnerBookings() {
                     }}
                   >
                     {actionLoading ? "Processing..." : "Mark as Completed"}
+                  </button>
+                )}
+
+                {/* Confirm button - for pending bookings that haven't started */}
+                {canConfirmBooking(selectedBooking) && !canCompleteBooking(selectedBooking) && (
+                  <button
+                    onClick={() => handleBookingAction(selectedBooking._id, "confirm")}
+                    disabled={actionLoading}
+                    className="dashboard-primary-btn"
+                    style={{
+                      flex: 1,
+                      background: "#3b82f6",
+                      opacity: actionLoading ? 0.6 : 1,
+                    }}
+                  >
+                    {actionLoading ? "Processing..." : "Confirm Booking"}
                   </button>
                 )}
 

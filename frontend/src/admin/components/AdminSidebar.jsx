@@ -1,20 +1,28 @@
 // src/admin/components/AdminSidebar.jsx
 import { NavLink, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { useAuth } from "../../contexts/AuthContext";
 
 function AdminSidebar() {
   const navigate = useNavigate();
+  const { auth } = useAuth();
   const [adminName, setAdminName] = useState("");
   const [adminRole, setAdminRole] = useState("");
 
   useEffect(() => {
-    const storedAdmin = localStorage.getItem("adminData");
-    if (storedAdmin) {
-      const admin = JSON.parse(storedAdmin);
-      setAdminName(admin.fullName || "Admin");
-      setAdminRole(admin.role || "admin");
+    // Use auth context first, fallback to localStorage
+    if (auth?.name) {
+      setAdminName(auth.name);
+      setAdminRole(auth.role || "admin");
+    } else {
+      const storedAdmin = localStorage.getItem("adminData");
+      if (storedAdmin) {
+        const admin = JSON.parse(storedAdmin);
+        setAdminName(admin.fullName || "Admin");
+        setAdminRole(admin.role || "admin");
+      }
     }
-  }, []);
+  }, [auth]);
 
   const navItems = [
     { label: "Dashboard", icon: "📊", path: "/admin/dashboard" },
@@ -31,10 +39,19 @@ function AdminSidebar() {
   ];
 
   const handleLogout = () => {
+    // Clear only admin session - preserves user/owner sessions
     localStorage.removeItem("adminToken");
-    localStorage.removeItem("adminData");
     localStorage.removeItem("adminRole");
-    navigate("/login");
+    localStorage.removeItem("adminData");
+    
+    // Update authRole if admin was the active role
+    const currentRole = localStorage.getItem("authRole");
+    if (currentRole === "admin" || currentRole === "super_admin") {
+      localStorage.removeItem("authRole");
+    }
+    
+    // Navigate to ADMIN login page
+    navigate("/admin/login", { replace: true });
   };
 
   const roleLabels = {

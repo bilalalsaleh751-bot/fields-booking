@@ -98,24 +98,21 @@
 .filter-select,
 .filter-input {
   width: 100%;
-  padding: 1px 12px 2px; /* Optical centering */
+  padding: 8px 12px;
   height: 40px;
-  line-height: 37px;
   border-radius: 10px;
   border: 1px solid #d1d5db;
   font-size: 14px;
   color: #111827;
   background: #ffffff;
   font-weight: 500;
-  -webkit-appearance: none;
-  appearance: none;
+  box-sizing: border-box;
 }
 
 .filter-select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23374151' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  padding-right: 32px;
+  -webkit-appearance: menulist;
+  -moz-appearance: menulist;
+  appearance: menulist;
   cursor: pointer;
 }
 
@@ -359,4 +356,197 @@
   height: 180px;
   object-fit: cover;
   border-radius: 12px;
+}
+
+/* ============================================================
+   CMS DYNAMIC SECTIONS
+   ============================================================ */
+
+/* Promotional Banner */
+.discover-banner {
+  padding: 40px 30px;
+  margin: -30px -40px 30px;
+  color: white;
+  text-align: center;
+  position: relative;
+}
+
+.discover-banner::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 0;
+}
+
+.discover-banner-content {
+  position: relative;
+  z-index: 1;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.discover-banner h2 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.discover-banner p {
+  font-size: 16px;
+  opacity: 0.95;
+  margin-bottom: 20px;
+}
+
+.discover-banner-btn {
+  display: inline-block;
+  padding: 12px 28px;
+  background: white;
+  color: #1e40af;
+  font-weight: 600;
+  border-radius: 999px;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.discover-banner-btn:hover {
+  background: #f8fafc;
+  transform: translateY(-2px);
+}
+
+/* No Results Section */
+.discover-no-results {
+  text-align: center;
+  padding: 60px 30px;
+  background: white;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+}
+
+.no-results-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.discover-no-results h3 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 8px;
+}
+
+.discover-no-results p {
+  color: #6b7280;
+  font-size: 15px;
+  margin-bottom: 20px;
+}
+
+.no-results-link {
+  display: inline-block;
+  padding: 10px 24px;
+  background: #3b82f6;
+  color: white;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.no-results-link:hover {
+  background: #2563eb;
+}
+
+/* CTA Section */
+.discover-cta-section {
+  text-align: center;
+  padding: 50px 30px;
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  color: white;
+  margin: 40px -40px -60px;
+  border-radius: 0;
+}
+
+.discover-cta-section h2 {
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.discover-cta-section p {
+  font-size: 16px;
+  opacity: 0.9;
+  margin-bottom: 24px;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.discover-cta-btn {
+  display: inline-block;
+  padding: 14px 32px;
+  background: white;
+  color: #1e40af;
+  font-weight: 600;
+  border-radius: 999px;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.discover-cta-btn:hover {
+  background: #f0f9ff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Header with background image */
+.discover-header {
+  position: relative;
+  padding: 30px;
+  margin: -30px -40px 30px;
+  border-radius: 0 0 20px 20px;
+}
+
+.discover-header[style*="background-image"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 0 0 20px 20px;
+  z-index: 0;
+}
+
+.discover-header[style*="background-image"] > * {
+  position: relative;
+  z-index: 1;
+}
+
+.discover-header[style*="background-image"] h1,
+.discover-header[style*="background-image"] p {
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .discover-banner {
+    margin: -20px -20px 20px;
+    padding: 30px 20px;
+  }
+  
+  .discover-banner h2 {
+    font-size: 22px;
+  }
+  
+  .discover-cta-section {
+    margin: 30px -20px -40px;
+    padding: 40px 20px;
+  }
+  
+  .discover-cta-section h2 {
+    font-size: 22px;
+  }
 }

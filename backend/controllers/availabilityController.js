@@ -3,22 +3,23 @@ import Booking from "../models/Booking.js";
 import Field from "../models/Field.js";
 import {
   timeToMinutes,
+  minutesToTime,
   timeRangesOverlap,
   getBookingRange,
-  generateHourlySlots,
+  generateTimeSlots,
   SLOT_DURATION_MINUTES,
   BLOCKED_SLOT_DURATION_MINUTES,
 } from "../utils/timeUtils.js";
 
 // ============================================================
 // GET FIELD AVAILABILITY
-// Returns slot availability with STRICT RANGE-BASED overlap detection
-// Uses centralized time utilities for consistency
+// Returns slot availability with PRECISE MINUTE-LEVEL overlap detection
+// Supports duration-aware availability checking
 // ============================================================
 export const getFieldAvailability = async (req, res) => {
   try {
     const { fieldId } = req.params;
-    const { date } = req.query; // YYYY-MM-DD
+    const { date, duration } = req.query; // YYYY-MM-DD, duration in hours (optional)
 
     // Validate date parameter
     if (!date) {
@@ -27,6 +28,10 @@ export const getFieldAvailability = async (req, res) => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return res.status(400).json({ message: "Invalid date format. Use YYYY-MM-DD" });
     }
+
+    // Parse duration for duration-aware checking
+    const requestedDuration = parseFloat(duration) || 1;
+    const durationMinutes = requestedDuration * 60;
 
     // Load field
     const field = await Field.findById(fieldId);
@@ -50,8 +55,11 @@ export const getFieldAvailability = async (req, res) => {
       closeHour = 23;
     }
 
-    // Generate all possible hourly slots (60-min granularity)
-    const allSlots = generateHourlySlots(openHour, closeHour);
+    // Handle midnight (00:00) as 24:00 for calculations
+    const closingMinutes = (closeHour === 0 || closeHour < openHour) ? 24 * 60 : closeHour * 60;
+
+    // Generate time slots with 30-minute granularity for precise booking
+    const allSlots = generateTimeSlots(openHour, closeHour, 30);
 
     // Check if entire date is blocked
     const isDateBlocked = (field.blockedDates || []).includes(date);
@@ -69,51 +77,69 @@ export const getFieldAvailability = async (req, res) => {
       status: { $ne: "cancelled" }
     });
 
-    // Build list of occupied time ranges from bookings
-    // Uses explicit endTime if available, otherwise calculates from duration
+    // Build list of occupied time ranges from bookings with EXACT times
     const bookedRanges = bookings
       .filter(b => b.startTime)
       .map(booking => {
-        // Prefer explicit endTime for accuracy
+        let start, end;
+        
+        // Use explicit endTime if available for maximum accuracy
         if (booking.endTime) {
-          return {
-            start: timeToMinutes(booking.startTime),
-            end: timeToMinutes(booking.endTime)
-          };
+          start = timeToMinutes(booking.startTime);
+          end = timeToMinutes(booking.endTime);
+        } else {
+          // Calculate from duration
+          const range = getBookingRange(booking.startTime, booking.duration || 1);
+          start = range.start;
+          end = range.end;
         }
-        // Fallback to calculation from duration
-        return getBookingRange(booking.startTime, booking.duration);
+        
+        return {
+          start,
+          end,
+          startTime: booking.startTime,
+          endTime: booking.endTime || minutesToTime(end),
+          duration: booking.duration || 1,
+        };
       });
 
-    // Build list of blocked time ranges (30-min each for owner flexibility)
+    // Build list of blocked time ranges
     const blockedRanges = blockedTimeSlots.map(blockedTime => {
       const startMin = timeToMinutes(blockedTime);
       return { start: startMin, end: startMin + BLOCKED_SLOT_DURATION_MINUTES };
     });
 
-    // Process each slot with RANGE-BASED overlap detection
+    // Process each slot with PRECISE RANGE-BASED overlap detection
     const slots = allSlots.map((time) => {
       const slotStart = timeToMinutes(time);
-      const slotEnd = slotStart + SLOT_DURATION_MINUTES;
-
+      const slotEnd = slotStart + SLOT_DURATION_MINUTES; // 30-min slot
+      
+      // For duration-aware check: would a booking at this time fit?
+      const bookingEnd = slotStart + durationMinutes;
+      
       // Check if this slot's range overlaps with any booked range
+      // Use the actual booking duration, not just the slot duration
       const isBooked = bookedRanges.some(range => 
-        timeRangesOverlap(slotStart, slotEnd, range.start, range.end)
+        timeRangesOverlap(slotStart, bookingEnd, range.start, range.end)
       );
 
       // Check if this slot's range overlaps with any blocked range
       let isBlocked = isDateBlocked;
       if (!isBlocked) {
         isBlocked = blockedRanges.some(range =>
-          timeRangesOverlap(slotStart, slotEnd, range.start, range.end)
+          timeRangesOverlap(slotStart, bookingEnd, range.start, range.end)
         );
       }
+      
+      // Check if booking would extend past closing time
+      const extendsPastClose = bookingEnd > closingMinutes;
 
       return {
         time,
         isBooked,
         isBlocked,
-        isAvailable: !isBooked && !isBlocked,
+        extendsPastClose,
+        isAvailable: !isBooked && !isBlocked && !extendsPastClose,
       };
     });
 
@@ -125,7 +151,13 @@ export const getFieldAvailability = async (req, res) => {
       date,
       openHour,
       closeHour,
+      requestedDuration,
       slots,
+      bookedRanges: bookedRanges.map(r => ({
+        startTime: r.startTime,
+        endTime: r.endTime,
+        duration: r.duration,
+      })),
       fullDay,
     });
 

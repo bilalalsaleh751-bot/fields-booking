@@ -1,10 +1,10 @@
 // src/pages/BookingFlow.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
 import "./BookingFlow.css";
 
-// خطوة خطوة للـ wizard
-const STEPS = [
+// SIMPLIFIED STEPS - Skip sport/area/court when coming from field page
+const STEPS_FULL = [
   { id: 1, key: "sport", label: "Sport" },
   { id: 2, key: "area", label: "Area" },
   { id: 3, key: "court", label: "Court" },
@@ -13,10 +13,17 @@ const STEPS = [
   { id: 6, key: "review", label: "Review" },
 ];
 
+// Simplified steps when field is pre-selected
+const STEPS_SIMPLE = [
+  { id: 1, key: "datetime", label: "Date & Time" },
+  { id: 2, key: "details", label: "Details" },
+  { id: 3, key: "review", label: "Review" },
+];
+
 const SPORT_OPTIONS = ["Football", "Basketball", "Padel", "Tennis", "Volleyball"];
 const AREA_OPTIONS = ["Beirut", "Hamra", "Jounieh", "Tripoli", "Sidon"];
 
-// المدد المسموحة (بالساعات)
+// Duration options in hours
 const DURATION_OPTIONS = [1, 1.5, 2, 3];
 
 // تحويل HH:MM إلى 12-hour مع AM/PM
@@ -123,17 +130,27 @@ export default function BookingFlow() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
+  // Determine if we're using simplified flow (field pre-selected)
+  const useSimplifiedFlow = Boolean(fieldId);
+  const STEPS = useSimplifiedFlow ? STEPS_SIMPLE : STEPS_FULL;
+
   const [step, setStep] = useState(1);
   const [field, setField] = useState(null);
   const [loadingField, setLoadingField] = useState(false);
   const [error, setError] = useState("");
+  
+  // Booking confirmation state
+  const [bookingConfirmed, setBookingConfirmed] = useState(false);
+  const [confirmedBooking, setConfirmedBooking] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  // بيانات الـ slots
+  // Slots data with booked ranges for precise checking
   const [slots, setSlots] = useState([]);
+  const [bookedRanges, setBookedRanges] = useState([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [slotsError, setSlotsError] = useState("");
 
-  // ساعات اليوم (open/close) – ياخدها من الـ API أو نستنتجها من الـ slots
+  // Day hours (open/close) from API
   const [dayHours, setDayHours] = useState({
     openHour: null,
     closeHour: null,
@@ -143,10 +160,10 @@ export default function BookingFlow() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userId, setUserId] = useState(null);
 
-  // فورم الحجز
+  // Booking form state
   const [form, setForm] = useState({
-    sport: "",
-    area: "",
+    sport: searchParams.get("sport") || "",
+    area: searchParams.get("city") || searchParams.get("area") || "",
     courtId: fieldId || "",
     courtName: "",
     date: searchParams.get("date") || "",
@@ -215,66 +232,81 @@ export default function BookingFlow() {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  // جلب الـ slots عند تغيير التاريخ
-  useEffect(() => {
+  // Fetch availability slots when date or duration changes
+  const fetchAvailability = useCallback(async () => {
     if (!fieldId || !form.date) {
       setSlots([]);
+      setBookedRanges([]);
       setSlotsError("");
       setDayHours({ openHour: null, closeHour: null });
       return;
     }
 
-    const fetchSlots = async () => {
-      try {
-        setSlotsLoading(true);
-        setSlotsError("");
+    try {
+      setSlotsLoading(true);
+      setSlotsError("");
 
-        const res = await fetch(
-          `http://localhost:5000/api/fields/${fieldId}/availability?date=${form.date}`
+      // Include duration in request for smart filtering
+      const durationParam = form.duration || "1";
+      const res = await fetch(
+        `http://localhost:5000/api/fields/${fieldId}/availability?date=${form.date}&duration=${durationParam}`
+      );
+
+      if (!res.ok) throw new Error("Failed to load availability");
+
+      const data = await res.json();
+      const apiSlots = data.slots || [];
+
+      setSlots(apiSlots);
+      setBookedRanges(data.bookedRanges || []);
+
+      // Get open/close hours from API
+      let openHour = data.openHour ?? null;
+      let closeHour = data.closeHour ?? null;
+
+      // Fallback: infer from slots
+      if ((openHour == null || closeHour == null) && apiSlots.length > 0) {
+        const firstH = parseInt(apiSlots[0].time.split(":")[0], 10);
+        const lastH = parseInt(
+          apiSlots[apiSlots.length - 1].time.split(":")[0],
+          10
         );
-
-        if (!res.ok) throw new Error("Failed to load availability");
-
-        const data = await res.json();
-        const apiSlots = data.slots || [];
-
-        setSlots(apiSlots);
-
-        // نحاول ناخد openHour/closeHour من الـ API
-        let openHour = data.openHour ?? null;
-        let closeHour = data.closeHour ?? null;
-
-        // إذا الـ backend ما رجّع open/close: نستنتج من أول وآخر slot
-        if ((openHour == null || closeHour == null) && apiSlots.length > 0) {
-          const firstH = parseInt(apiSlots[0].time.split(":")[0], 10);
-          const lastH = parseInt(
-            apiSlots[apiSlots.length - 1].time.split(":")[0],
-            10
-          );
-          // آخر slot هو الساعة الأخيرة – نضيف +1 كـ closing hour تقديرًا
-          openHour = firstH;
-          closeHour = lastH + 1;
-        }
-
-        // fallback default
-        if (openHour == null || closeHour == null) {
-          openHour = 8;
-          closeHour = 23;
-        }
-
-        setDayHours({ openHour, closeHour });
-      } catch (err) {
-        console.error("Slots error:", err);
-        setSlotsError("Could not load availability for this day.");
-        setSlots([]);
-        setDayHours({ openHour: null, closeHour: null });
-      } finally {
-        setSlotsLoading(false);
+        openHour = firstH;
+        closeHour = lastH + 1;
       }
-    };
 
-    fetchSlots();
-  }, [fieldId, form.date]);
+      // Default fallback
+      if (openHour == null || closeHour == null) {
+        openHour = 8;
+        closeHour = 23;
+      }
+
+      setDayHours({ openHour, closeHour });
+    } catch (err) {
+      console.error("Slots error:", err);
+      setSlotsError("Could not load availability for this day.");
+      setSlots([]);
+      setBookedRanges([]);
+      setDayHours({ openHour: null, closeHour: null });
+    } finally {
+      setSlotsLoading(false);
+    }
+  }, [fieldId, form.date, form.duration]);
+
+  // Fetch slots when date or duration changes
+  useEffect(() => {
+    fetchAvailability();
+  }, [fetchAvailability]);
+  
+  // Clear selected time when duration changes (it might no longer be valid)
+  useEffect(() => {
+    if (form.time && slots.length > 0) {
+      const selectedSlot = slots.find(s => s.time === form.time);
+      if (selectedSlot && !selectedSlot.isAvailable) {
+        setForm(prev => ({ ...prev, time: "" }));
+      }
+    }
+  }, [form.duration, slots, form.time]);
 
   // 🔥 تقييد المدة بحسب الوقت المتبقي قبل الإغلاق (Option B)
   useEffect(() => {
@@ -313,22 +345,33 @@ export default function BookingFlow() {
     slots.length > 0 &&
     slots.every((s) => s.isBooked || s.isBlocked);
 
-  // Next step
+  // Get current step key based on flow type
+  const getCurrentStepKey = () => {
+    return STEPS[step - 1]?.key || "";
+  };
+
+  // Get max step based on flow type
+  const maxStep = STEPS.length;
+
+  // Next step with smart validation
   const goNext = () => {
-    // Validation per step
-    if (step === 1 && !form.sport) {
-      return setError("Please select a sport.");
+    const stepKey = getCurrentStepKey();
+    
+    // Full flow validations
+    if (!useSimplifiedFlow) {
+      if (stepKey === "sport" && !form.sport) {
+        return setError("Please select a sport.");
+      }
+      if (stepKey === "area" && !form.area) {
+        return setError("Please select an area.");
+      }
+      if (stepKey === "court" && !form.courtName) {
+        return setError("Please select a court.");
+      }
     }
 
-    if (step === 2 && !form.area) {
-      return setError("Please select an area.");
-    }
-
-    if (step === 3 && !form.courtName) {
-      return setError("Please select a court.");
-    }
-
-    if (step === 4) {
+    // Date/Time validation (both flows)
+    if (stepKey === "datetime") {
       if (!form.date) {
         return setError("Please choose a date.");
       }
@@ -349,27 +392,20 @@ export default function BookingFlow() {
         return setError("Please pick a time from the available slots.");
       }
 
-      // لازم الوقت يكون من الـ slots + غير محجوز أو محظور + بيكفي للمدة
+      // Validate the selected slot is available
       const chosenSlot = slots.find((s) => s.time === form.time);
-      if (!chosenSlot || chosenSlot.isBooked || chosenSlot.isBlocked) {
-        return setError("Please pick a valid available time.");
-      }
-
-      const durationHours = parseFloat(form.duration) || 1;
-      const fits = canFitDurationAtTime(slots, form.time, durationHours);
-      if (!fits) {
-        return setError(
-          "This time does not have enough free hours for the selected duration."
-        );
+      if (!chosenSlot || !chosenSlot.isAvailable) {
+        return setError("Please pick a valid available time slot.");
       }
     }
 
-    if (step === 5 && (!form.fullName || !form.email || !form.phone)) {
-      return setError("Please fill your personal details.");
+    // Details validation (both flows)
+    if (stepKey === "details" && (!form.fullName || !form.email || !form.phone)) {
+      return setError("Please fill in all your contact details.");
     }
 
     setError("");
-    setStep((s) => Math.min(6, s + 1));
+    setStep((s) => Math.min(maxStep, s + 1));
   };
 
   // Back
@@ -386,8 +422,10 @@ export default function BookingFlow() {
   const handleConfirm = async () => {
     try {
       setError("");
+      setSubmitting(true);
 
       if (!field || !field._id) {
+        setSubmitting(false);
         return setError("Field information missing.");
       }
 
@@ -413,28 +451,110 @@ export default function BookingFlow() {
       const created = await res.json();
 
       if (!res.ok) {
+        setSubmitting(false);
         setError(created?.message || "Booking failed.");
         return;
       }
 
-      alert(
-        `Booking Confirmed!\n\n` +
-          `Booking ID: ${created.bookingId}\n` +
-          `Field: ${form.courtName}\n` +
-          `Date: ${form.date} at ${formatTimeLabel(form.time)}\n` +
-          `Duration: ${durationNumber} hour(s)\n` +
-          `Total: ${currency} ${totalPrice.toFixed(2)}`
-      );
-
-      navigate("/discover");
+      // Set booking confirmed state with all details
+      setConfirmedBooking({
+        bookingId: created.bookingId || created._id,
+        fieldName: form.courtName || field.name,
+        date: form.date,
+        time: form.time,
+        duration: durationNumber,
+        totalPrice,
+        currency,
+        userName: form.fullName,
+        userEmail: form.email,
+        status: created.status || "pending",
+      });
+      setBookingConfirmed(true);
+      setSubmitting(false);
     } catch (err) {
       console.error("Booking error:", err);
+      setSubmitting(false);
       setError("Something went wrong. Try again.");
     }
   };
 
   const isActive = (id) => id === step;
   const isCompleted = (id) => id < step;
+
+  // ================== BOOKING CONFIRMED SCREEN ==================
+  if (bookingConfirmed && confirmedBooking) {
+    return (
+      <div className="booking-flow-page">
+        <div className="booking-confirmation-container">
+          <div className="booking-confirmation-card">
+            <div className="confirmation-icon">✓</div>
+            <h1 className="confirmation-title">Booking Confirmed!</h1>
+            <p className="confirmation-subtitle">
+              Your booking has been successfully submitted
+            </p>
+
+            <div className="confirmation-details">
+              <div className="confirmation-row">
+                <span className="confirmation-label">Booking ID</span>
+                <span className="confirmation-value">{confirmedBooking.bookingId}</span>
+              </div>
+              <div className="confirmation-row">
+                <span className="confirmation-label">Court</span>
+                <span className="confirmation-value">{confirmedBooking.fieldName}</span>
+              </div>
+              <div className="confirmation-row">
+                <span className="confirmation-label">Date</span>
+                <span className="confirmation-value">{confirmedBooking.date}</span>
+              </div>
+              <div className="confirmation-row">
+                <span className="confirmation-label">Time</span>
+                <span className="confirmation-value">
+                  {formatTimeRange(confirmedBooking.time, confirmedBooking.duration)}
+                </span>
+              </div>
+              <div className="confirmation-row">
+                <span className="confirmation-label">Duration</span>
+                <span className="confirmation-value">
+                  {confirmedBooking.duration} hour{confirmedBooking.duration !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <div className="confirmation-row highlight">
+                <span className="confirmation-label">Total Price</span>
+                <span className="confirmation-value">
+                  {confirmedBooking.currency} {confirmedBooking.totalPrice.toFixed(2)}
+                </span>
+              </div>
+              <div className="confirmation-row">
+                <span className="confirmation-label">Status</span>
+                <span className="confirmation-status pending">
+                  {confirmedBooking.status === "pending" ? "Pending Confirmation" : confirmedBooking.status}
+                </span>
+              </div>
+            </div>
+
+            <div className="confirmation-notice">
+              <p>📧 A confirmation email has been sent to <strong>{confirmedBooking.userEmail}</strong></p>
+              <p>⏰ The owner will confirm your booking shortly</p>
+            </div>
+
+            <div className="confirmation-actions">
+              {isLoggedIn && (
+                <Link to="/account/bookings" className="confirmation-btn primary">
+                  View My Bookings
+                </Link>
+              )}
+              <Link to="/discover" className="confirmation-btn secondary">
+                Book Another Court
+              </Link>
+              <Link to="/" className="confirmation-btn outline">
+                Back to Home
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="booking-flow-page">
@@ -478,8 +598,8 @@ export default function BookingFlow() {
       <div className="booking-card">
         {error && <div className="booking-error">{error}</div>}
 
-        {/* STEP 1 - SPORT */}
-        {step === 1 && (
+        {/* SPORT SELECTION - Only in full flow */}
+        {!useSimplifiedFlow && getCurrentStepKey() === "sport" && (
           <>
             <h2 className="booking-card-title">Select a Sport</h2>
             <p className="booking-card-subtitle">What would you like to play?</p>
@@ -517,8 +637,8 @@ export default function BookingFlow() {
           </>
         )}
 
-        {/* STEP 2 - AREA */}
-        {step === 2 && (
+        {/* AREA SELECTION - Only in full flow */}
+        {!useSimplifiedFlow && getCurrentStepKey() === "area" && (
           <>
             <h2 className="booking-card-title">Choose an Area</h2>
             <p className="booking-card-subtitle">Where do you want to play?</p>
@@ -556,8 +676,8 @@ export default function BookingFlow() {
           </>
         )}
 
-        {/* STEP 3 - COURT */}
-        {step === 3 && (
+        {/* COURT SELECTION - Only in full flow */}
+        {!useSimplifiedFlow && getCurrentStepKey() === "court" && (
           <>
             <h2 className="booking-card-title">Select a Court</h2>
             <p className="booking-card-subtitle">Pick the available court.</p>
@@ -608,8 +728,8 @@ export default function BookingFlow() {
           </>
         )}
 
-        {/* STEP 4 - DATE & TIME + AVAILABILITY SLOTS */}
-        {step === 4 && (
+        {/* DATE & TIME SELECTION */}
+        {getCurrentStepKey() === "datetime" && (
           <>
             <h2 className="booking-card-title">Date & Time</h2>
             <p className="booking-card-subtitle">Choose when you want to play.</p>
@@ -685,53 +805,61 @@ export default function BookingFlow() {
                 !slotsError &&
                 slots.length > 0 &&
                 !isDayFullyBooked && (
-                  <div className="booking-options-grid booking-slots-grid">
-                    {slots.map((slot) => {
-                      // Duration in hours (can be fractional: 1, 1.5, 2, etc.)
-                      const durationHours = parseFloat(form.duration) || 1;
+                  <>
+                    {/* Show current booked ranges for transparency */}
+                    {bookedRanges.length > 0 && (
+                      <div className="booking-booked-info">
+                        <span className="booking-info-icon">ℹ️</span>
+                        <span>
+                          Already booked: {bookedRanges.map((r, i) => (
+                            <span key={i} className="booked-range-tag">
+                              {formatTimeLabel(r.startTime)} - {formatTimeLabel(r.endTime)}
+                            </span>
+                          ))}
+                        </span>
+                      </div>
+                    )}
+                    
+                    <div className="booking-options-grid booking-slots-grid">
+                      {slots.map((slot) => {
+                        // Slot availability already considers duration from API
+                        const isUnavailable = !slot.isAvailable;
+                        const disabled = isUnavailable;
+                        
+                        // Show the booking range if this slot is selected
+                        const durationHours = parseFloat(form.duration) || 1;
+                        const endTime = getEndTime(slot.time, durationHours);
 
-                      // Check if this start time can fit the duration
-                      // Each start time is evaluated INDEPENDENTLY
-                      const fitsForDuration = canFitDurationAtTime(
-                        slots,
-                        slot.time,
-                        durationHours
-                      );
-
-                      const isUnavailable = slot.isBooked || slot.isBlocked;
-                      const disabled = isUnavailable || !fitsForDuration;
-
-                      return (
-                        <button
-                          key={slot.time}
-                          type="button"
-                          disabled={disabled}
-                          onClick={() =>
-                            !disabled && updateForm("time", slot.time)
-                          }
-                          className={[
-                            "booking-slot-btn",
-                            isUnavailable ? "booked" : "available",
-                            !isUnavailable && !fitsForDuration
-                              ? "not-enough-time"
-                              : "",
-                            form.time === slot.time ? "selected" : "",
-                          ].join(" ")}
-                        >
-                          <span>{formatTimeLabel(slot.time)}</span>
-                          <small>
-                            {slot.isBlocked
-                              ? "Unavailable"
-                              : slot.isBooked
-                              ? "Booked"
-                              : fitsForDuration
-                              ? "Available"
-                              : "Not enough time"}
-                          </small>
-                        </button>
-                      );
-                    })}
-                  </div>
+                        return (
+                          <button
+                            key={slot.time}
+                            type="button"
+                            disabled={disabled}
+                            onClick={() =>
+                              !disabled && updateForm("time", slot.time)
+                            }
+                            className={[
+                              "booking-slot-btn",
+                              isUnavailable ? "booked" : "available",
+                              slot.extendsPastClose ? "past-close" : "",
+                              form.time === slot.time ? "selected" : "",
+                            ].join(" ")}
+                          >
+                            <span className="slot-time">{formatTimeLabel(slot.time)}</span>
+                            <small className="slot-status">
+                              {slot.isBlocked
+                                ? "Blocked"
+                                : slot.isBooked
+                                ? "Booked"
+                                : slot.extendsPastClose
+                                ? "Past closing"
+                                : `→ ${formatTimeLabel(endTime)}`}
+                            </small>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
                 )}
 
               {form.date &&
@@ -746,8 +874,8 @@ export default function BookingFlow() {
           </>
         )}
 
-        {/* STEP 5 - USER DETAILS */}
-        {step === 5 && (
+        {/* USER DETAILS */}
+        {getCurrentStepKey() === "details" && (
           <>
             <h2 className="booking-card-title">Your Details</h2>
             <p className="booking-card-subtitle">
@@ -794,8 +922,8 @@ export default function BookingFlow() {
           </>
         )}
 
-        {/* STEP 6 - REVIEW */}
-        {step === 6 && (
+        {/* REVIEW & CONFIRM */}
+        {getCurrentStepKey() === "review" && (
           <>
             <h2 className="booking-card-title">Review & Confirm</h2>
             <p className="booking-card-subtitle">Check your booking details.</p>
@@ -873,7 +1001,7 @@ export default function BookingFlow() {
             Back
           </button>
 
-          {step < 6 ? (
+          {getCurrentStepKey() !== "review" ? (
             <button
               type="button"
               className="booking-primary-btn"
@@ -886,8 +1014,9 @@ export default function BookingFlow() {
               type="button"
               className="booking-primary-btn"
               onClick={handleConfirm}
+              disabled={submitting}
             >
-              Confirm Booking
+              {submitting ? "Processing..." : "Confirm Booking"}
             </button>
           )}
         </div>

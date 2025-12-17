@@ -7,10 +7,12 @@ export const auth = (req, res, next) => {
     return res.status(401).json({ message: "No token provided" });
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Use same fallback as other controllers to ensure consistency
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "jwtsecret");
     req.user = decoded;
     next();
   } catch (err) {
+    console.error("Auth middleware error:", err.message);
     return res.status(401).json({ message: "Invalid token" });
   }
 };

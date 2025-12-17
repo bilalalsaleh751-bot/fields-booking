@@ -33,25 +33,23 @@ export const minutesToTime = (mins) => {
 };
 
 /**
- * Check if two time ranges overlap
- * Range A cannot START at or before Range B ends
- * This ensures back-to-back bookings are blocked (no booking can start at exact end time)
+ * Check if two time ranges overlap (STRICT - no touching allowed)
  * 
- * Example: Booking 09:00→10:00 exists
- *   - Start at 09:00: 540 <= 600 ✓ → BLOCKED
- *   - Start at 10:00: 600 <= 600 ✓ → BLOCKED  
- *   - Start at 11:00: 660 <= 600 ✗ → AVAILABLE
+ * Example: Booking 09:00→10:30 exists (540-630 mins)
+ *   - New booking 08:00→09:00 (480-540): 480 < 630 ✓ && 540 > 540 ✗ → NO OVERLAP
+ *   - New booking 10:30→11:30 (630-690): 630 < 630 ✗ → NO OVERLAP
+ *   - New booking 09:30→10:00 (570-600): 570 < 630 ✓ && 540 < 600 ✓ → OVERLAP
  * 
- * @param {number} startA - Start of range A (minutes) - the NEW/checking range
+ * @param {number} startA - Start of range A (minutes)
  * @param {number} endA - End of range A (minutes)
- * @param {number} startB - Start of range B (minutes) - the EXISTING range
+ * @param {number} startB - Start of range B (minutes)
  * @param {number} endB - End of range B (minutes)
- * @returns {boolean} True if ranges overlap (A is blocked by B)
+ * @returns {boolean} True if ranges overlap
  */
 export const timeRangesOverlap = (startA, endA, startB, endB) => {
-  // startA <= endB: New range starts at or before existing ends (BLOCKS end time)
-  // startB < endA: Existing range starts before new ends
-  return startA <= endB && startB < endA;
+  // Two ranges overlap if: startA < endB AND startB < endA
+  // This allows back-to-back bookings (end of one = start of another)
+  return startA < endB && startB < endA;
 };
 
 /**
@@ -67,21 +65,91 @@ export const getBookingRange = (startTime, duration) => {
 };
 
 /**
- * Generate hourly time slots for a given range
- * GRANULARITY: 60 minutes (1 hour) - UNIFIED across system
+ * Generate time slots with 30-minute granularity for precise booking
  * @param {number} openHour - Opening hour (0-23)
  * @param {number} closeHour - Closing hour (0-24)
- * @returns {string[]} Array of time strings in "HH:00" format
+ * @returns {string[]} Array of time strings in "HH:MM" format
  */
 export const generateHourlySlots = (openHour, closeHour) => {
   const slots = [];
   const start = Math.max(0, Math.min(23, openHour));
   const end = Math.max(start + 1, Math.min(24, closeHour));
   
+  // Generate slots every 30 minutes for more precision
   for (let h = start; h < end; h++) {
     slots.push(`${String(h).padStart(2, "0")}:00`);
+    // Add half-hour slot only if not the last hour
+    if (h < end - 1 || (h === end - 1 && closeHour * 60 > h * 60 + 30)) {
+      slots.push(`${String(h).padStart(2, "0")}:30`);
+    }
   }
   return slots;
+};
+
+/**
+ * Generate time slots with custom granularity
+ * @param {number} openHour - Opening hour (0-23)
+ * @param {number} closeHour - Closing hour (0-24, or 0 for midnight)
+ * @param {number} granularityMinutes - Minutes between slots (default: 30)
+ * @returns {string[]} Array of time strings in "HH:MM" format
+ */
+export const generateTimeSlots = (openHour, closeHour, granularityMinutes = 30) => {
+  const slots = [];
+  const startMins = Math.max(0, openHour) * 60;
+  
+  // Handle midnight (0) as 24:00 if closeHour is less than openHour
+  let endMins;
+  if (closeHour === 0 || (closeHour < openHour)) {
+    endMins = 24 * 60; // Midnight = 24:00
+  } else {
+    endMins = Math.min(24 * 60, closeHour * 60);
+  }
+  
+  for (let mins = startMins; mins < endMins; mins += granularityMinutes) {
+    slots.push(minutesToTime(mins));
+  }
+  return slots;
+};
+
+/**
+ * Check if a specific start time can fit a booking of given duration
+ * without overlapping any existing bookings
+ * 
+ * @param {string} startTime - Proposed start time "HH:MM"
+ * @param {number} duration - Duration in hours
+ * @param {Array} existingBookings - Array of {startTime, endTime, duration}
+ * @param {number} closeHour - Field closing hour
+ * @returns {boolean} True if the slot can accommodate the booking
+ */
+export const canFitBooking = (startTime, duration, existingBookings, closeHour) => {
+  const proposedStart = timeToMinutes(startTime);
+  const proposedEnd = proposedStart + (duration * 60);
+  const closingTime = closeHour * 60;
+  
+  // Check if booking would extend past closing time
+  if (proposedEnd > closingTime) {
+    return false;
+  }
+  
+  // Check for overlaps with existing bookings
+  for (const booking of existingBookings) {
+    let existingStart, existingEnd;
+    
+    if (booking.endTime) {
+      existingStart = timeToMinutes(booking.startTime);
+      existingEnd = timeToMinutes(booking.endTime);
+    } else {
+      existingStart = timeToMinutes(booking.startTime);
+      existingEnd = existingStart + ((booking.duration || 1) * 60);
+    }
+    
+    // Check overlap using strict range comparison
+    if (timeRangesOverlap(proposedStart, proposedEnd, existingStart, existingEnd)) {
+      return false;
+    }
+  }
+  
+  return true;
 };
 
 /**
@@ -111,14 +179,13 @@ export const normalizeToHour = (timeStr) => {
 
 /**
  * SLOT DURATION constant - unified across the system
- * 60 minutes = 1 hour granularity
+ * 30 minutes = half-hour granularity for precision
  */
-export const SLOT_DURATION_MINUTES = 60;
+export const SLOT_DURATION_MINUTES = 30;
 
 /**
  * BLOCKED SLOT DURATION constant
  * Owner blocking uses 30-minute granularity for flexibility
- * But availability display shows hourly slots
  */
 export const BLOCKED_SLOT_DURATION_MINUTES = 30;
 

@@ -532,6 +532,7 @@ export const updateBookingStatus = async (req, res) => {
     }
 
     // Handle CONFIRM action (for pending bookings)
+    // CRITICAL: This creates a transaction and adds to owner earnings
     if (action === "confirm") {
       if (booking.status !== "pending") {
         return res.status(400).json({ 
@@ -540,7 +541,50 @@ export const updateBookingStatus = async (req, res) => {
       }
       
       booking.status = "confirmed";
+      booking.paymentStatus = "paid";
       await booking.save();
+
+      // ============================================================
+      // CREATE TRANSACTION ON CONFIRMATION (for owner earnings)
+      // Transaction is idempotent - won't duplicate if already exists
+      // ============================================================
+      const existingTransaction = await Transaction.findOne({ bookingId: booking._id });
+      if (!existingTransaction) {
+        const settings = await PlatformSettings.getSettings();
+        const commissionRate = settings.commissionRate || 15;
+        const commissionAmount = (booking.totalPrice * commissionRate) / 100;
+        const netToOwner = booking.totalPrice - commissionAmount;
+        
+        await Transaction.create({
+          bookingId: booking._id,
+          fieldId: booking.field._id,
+          ownerId: booking.field.owner,
+          userName: booking.userName,
+          userEmail: booking.userEmail,
+          userPhone: booking.userPhone,
+          amountGross: booking.totalPrice,
+          commissionRate,
+          commissionAmount,
+          netToOwner,
+          status: "completed", // Transaction is completed (payment received)
+          bookingDate: booking.date,
+          bookingStartTime: booking.startTime,
+          bookingEndTime: booking.endTime,
+          fieldName: booking.field.name,
+        });
+        
+        console.log(`Transaction created for confirmed booking ${booking._id}: $${booking.totalPrice}`);
+      }
+
+      // Trigger notification for booking confirmation
+      const fieldName = booking.field?.name || "Field";
+      await createNotification(
+        booking.field.owner,
+        "confirmed",
+        `Booking confirmed: ${booking.userName} at ${fieldName} on ${booking.date}`,
+        booking._id,
+        booking.field._id
+      );
 
       return res.json({
         message: "Booking confirmed successfully",
@@ -549,6 +593,7 @@ export const updateBookingStatus = async (req, res) => {
           status: booking.status,
           paymentStatus: getPaymentStatus(booking.status),
           category: categorizeBooking(booking),
+          totalPrice: booking.totalPrice,
         },
       });
     }

@@ -2,6 +2,12 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import FieldCard from "../components/search/FieldCard";
+import {
+  SPORT_TYPES,
+  SURFACE_TYPES,
+  CITIES_LIST,
+  AMENITIES as AMENITIES_LIST,
+} from "../constants/filterOptions";
 import "./Discover.css";
 
 // Leaflet CSS (loaded once)
@@ -12,10 +18,40 @@ const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
 const DEFAULT_CENTER = { lat: 33.8938, lng: 35.5018 };
 const DEFAULT_ZOOM = 9;
 
+// Sports with icons for UI
+const SPORTS_LIST = SPORT_TYPES.map(name => ({
+  name,
+  icon: {
+    "Football": "⚽",
+    "Basketball": "🏀",
+    "Tennis": "🎾",
+    "Padel": "🏓",
+    "Volleyball": "🏐",
+    "Swimming": "🏊",
+    "Squash": "🏸",
+    "Badminton": "🏸",
+    "Cricket": "🏏",
+    "Rugby": "🏉",
+    "Multi-Purpose": "🏟️",
+  }[name] || "🏟️"
+}));
+
+const TIME_SLOTS = Array.from({ length: 15 }, (_, i) => {
+  const hour = i + 6; // 6:00 to 20:00
+  return `${String(hour).padStart(2, "0")}:00`;
+});
+
 export default function Discover() {
   const [fields, setFields] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  
+  // Sport types from database
+  const [sportTypes, setSportTypes] = useState([]);
+  
+  // CMS Content from database
+  const [cmsContent, setCmsContent] = useState(null);
+  const [cmsLoading, setCmsLoading] = useState(true);
 
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -28,6 +64,7 @@ export default function Discover() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sport, setSport] = useState("");
   const [city, setCity] = useState("");
+  const [area, setArea] = useState(""); // Area text input
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
 
@@ -51,6 +88,10 @@ export default function Discover() {
   // Stable amenities string for useMemo dependency
   const amenitiesKey = amenities.join(",");
   
+  // Availability data for date/time filtering
+  const [availabilityData, setAvailabilityData] = useState({}); // { fieldId: { slots, fullDay } }
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  
   // Map refs
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -65,6 +106,7 @@ export default function Discover() {
     const sQuery = searchParams.get("q") || "";
     const sSport = searchParams.get("sport") || "";
     const sCity = searchParams.get("city") || "";
+    const sArea = searchParams.get("area") || "";
     const sDate = searchParams.get("date") || "";
     const sTime = searchParams.get("time") || "";
 
@@ -93,6 +135,7 @@ export default function Discover() {
     setSearchQuery(sQuery);
     setSport(sSport);
     setCity(sCity);
+    setArea(sArea);
     setDate(sDate);
     setTime(sTime);
     setMinPrice(sMin ? Number(sMin) : 0);
@@ -105,6 +148,31 @@ export default function Discover() {
     setViewMode(sView);
     setAmenities(sAmenities);
   }, [searchParamsString]);
+
+  // ================== FETCH CMS CONTENT AND SPORT TYPES FROM DATABASE ==================
+  useEffect(() => {
+    const fetchDiscoverData = async () => {
+      try {
+        setCmsLoading(true);
+        const res = await fetch("http://localhost:5000/api/public/discover");
+        if (res.ok) {
+          const data = await res.json();
+          setCmsContent(data.content);
+          setSportTypes(data.sportTypes || []);
+        } else {
+          // Fallback to static list if API fails
+          setSportTypes(SPORTS_LIST);
+        }
+      } catch (err) {
+        console.error("Failed to fetch discover content:", err);
+        // Fallback to static list if API fails
+        setSportTypes(SPORTS_LIST);
+      } finally {
+        setCmsLoading(false);
+      }
+    };
+    fetchDiscoverData();
+  }, []);
 
   // ================== FETCH FROM BACKEND (uses stable string dependency) ==================
   useEffect(() => {
@@ -150,6 +218,67 @@ export default function Discover() {
     return () => { isCancelled = true; };
   }, [searchParamsString]);
 
+  // ================== FETCH AVAILABILITY WHEN DATE IS SELECTED ==================
+  useEffect(() => {
+    // Only fetch availability if date is selected and we have fields
+    if (!date || fields.length === 0) {
+      setAvailabilityData({});
+      return;
+    }
+
+    let isCancelled = false;
+    
+    const fetchAvailability = async () => {
+      setAvailabilityLoading(true);
+      
+      try {
+        // Fetch availability for all fields in parallel (limit to first 20 for performance)
+        const fieldsToCheck = fields.slice(0, 50);
+        const availabilityPromises = fieldsToCheck.map(async (field) => {
+          try {
+            const res = await fetch(
+              `http://localhost:5000/api/fields/${field._id}/availability?date=${date}`
+            );
+            if (res.ok) {
+              const data = await res.json();
+              return { fieldId: field._id, ...data };
+            }
+            return { fieldId: field._id, slots: [], fullDay: false };
+          } catch {
+            return { fieldId: field._id, slots: [], fullDay: false };
+          }
+        });
+
+        const results = await Promise.all(availabilityPromises);
+        
+        if (!isCancelled) {
+          const availabilityMap = {};
+          results.forEach((result) => {
+            availabilityMap[result.fieldId] = {
+              slots: result.slots || [],
+              fullDay: result.fullDay || false,
+              bookedRanges: result.bookedRanges || [],
+            };
+          });
+          setAvailabilityData(availabilityMap);
+        }
+      } catch (err) {
+        console.error("Failed to fetch availability:", err);
+        if (!isCancelled) {
+          setAvailabilityData({});
+        }
+      } finally {
+        if (!isCancelled) {
+          setAvailabilityLoading(false);
+        }
+      }
+    };
+
+    fetchAvailability();
+    
+    return () => { isCancelled = true; };
+  }, [date, fields]);
+
   // ================== CALCULATE DISTANCE FROM USER ==================
   const calculateDistance = useCallback((lat1, lng1, lat2, lng2) => {
     const R = 6371; // Earth's radius in km
@@ -190,6 +319,14 @@ export default function Discover() {
     if (city) {
       result = result.filter((f) => 
         (f.city || "").toLowerCase() === city.toLowerCase()
+      );
+    }
+
+    // Area filter (instant) - text search
+    if (area.trim()) {
+      const areaQuery = area.toLowerCase().trim();
+      result = result.filter((f) => 
+        (f.area || "").toLowerCase().includes(areaQuery)
       );
     }
 
@@ -237,6 +374,61 @@ export default function Discover() {
       });
     }
 
+    // ================== AVAILABILITY FILTER (DATE/TIME) ==================
+    // If date is selected, filter out fields that are:
+    // 1. Fully blocked on that date
+    // 2. Have all time slots booked
+    // 3. Have the specific selected time slot booked (if time is selected)
+    if (date && Object.keys(availabilityData).length > 0) {
+      result = result.filter((f) => {
+        const availability = availabilityData[f._id];
+        
+        // If we don't have availability data for this field, include it (benefit of doubt)
+        if (!availability) return true;
+        
+        // If the entire day is fully booked/blocked, exclude it
+        if (availability.fullDay) return false;
+        
+        const slots = availability.slots || [];
+        
+        // If no slots are available at all on this day, exclude it
+        if (slots.length === 0) return false;
+        
+        // Check if ANY slot is available
+        const hasAnyAvailableSlot = slots.some((s) => s.isAvailable);
+        if (!hasAnyAvailableSlot) return false;
+        
+        // If a specific time is selected, check that time slot
+        if (time) {
+          const selectedSlot = slots.find((s) => s.time === time);
+          
+          // If the selected time slot exists and is not available, exclude the field
+          if (selectedSlot && !selectedSlot.isAvailable) return false;
+          
+          // If the time falls within a booked range, exclude the field
+          const bookedRanges = availability.bookedRanges || [];
+          if (bookedRanges.length > 0) {
+            const selectedMinutes = parseInt(time.split(":")[0], 10) * 60 + 
+                                    parseInt(time.split(":")[1] || "0", 10);
+            
+            for (const range of bookedRanges) {
+              const startMin = parseInt(range.startTime.split(":")[0], 10) * 60 +
+                              parseInt(range.startTime.split(":")[1] || "0", 10);
+              const endMin = parseInt(range.endTime.split(":")[0], 10) * 60 +
+                            parseInt(range.endTime.split(":")[1] || "0", 10);
+              
+              // If selected time falls within a booked range, exclude
+              if (selectedMinutes >= startMin && selectedMinutes < endMin) {
+                return false;
+              }
+            }
+          }
+        }
+        
+        return true;
+      });
+    }
+
     // Add distance if user location is available
     if (userLocation) {
       result = result.map(f => {
@@ -270,7 +462,7 @@ export default function Discover() {
     // relevance = as returned from backend
 
     return result;
-  }, [fields, searchQuery, sport, city, minPrice, maxPrice, minRating, indoor, surfaceType, owner, amenitiesKey, sortBy, userLocation, calculateDistance]);
+  }, [fields, searchQuery, sport, city, area, minPrice, maxPrice, minRating, indoor, surfaceType, owner, amenitiesKey, sortBy, userLocation, calculateDistance, date, time, availabilityData]);
 
   // ================== LOAD LEAFLET AND INITIALIZE MAP ==================
   useEffect(() => {
@@ -474,6 +666,7 @@ export default function Discover() {
     if (searchQuery) params.set("q", searchQuery);
     if (sport) params.set("sport", sport);
     if (city) params.set("city", city);
+    if (area) params.set("area", area);
     if (date) params.set("date", date);
     if (time) params.set("time", time);
 
@@ -496,7 +689,7 @@ export default function Discover() {
       pathname: locationHook.pathname,
       search: params.toString(),
     });
-  }, [searchQuery, sport, city, date, time, minPrice, maxPrice, minRating, indoor, surfaceType, amenities, owner, sortBy, viewMode, navigate, locationHook.pathname]);
+  }, [searchQuery, sport, city, area, date, time, minPrice, maxPrice, minRating, indoor, surfaceType, amenities, owner, sortBy, viewMode, navigate, locationHook.pathname]);
 
   const toggleAmenity = useCallback((name) => {
     setAmenities((prev) =>
@@ -512,30 +705,72 @@ export default function Discover() {
   }, [applyFilters]);
 
   // ================== RENDER ==================
+  // Get CMS values with fallbacks
+  const headerTitle = cmsContent?.header?.title || "Discover";
+  const headerSubtitle = cmsContent?.header?.subtitle || "Find courts across Lebanon";
+  const headerBgImage = cmsContent?.header?.backgroundImage;
+  const showSearch = cmsContent?.header?.showSearch !== false;
+  const bannerEnabled = cmsContent?.banner?.isEnabled;
+  const noResultsTitle = cmsContent?.noResults?.title || "No Courts Found";
+  const noResultsMessage = cmsContent?.noResults?.message || "Try adjusting your filters or search in a different area";
+  const ctaEnabled = cmsContent?.ctaSection?.isEnabled;
+  const filterLabels = cmsContent?.filterLabels || {};
+
   return (
     <div className="discover-page">
-      {/* HEADER TITLE + SEARCH ROW */}
-      <div className="discover-header">
-        <h1>Discover</h1>
-        <p>Find courts across Lebanon</p>
-
-        <div className="discover-search-row">
-          <input
-            type="text"
-            className="discover-search-input"
-            placeholder="Search by name, location, or sport..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={handleSearchKeyDown}
-          />
-          <button 
-            className="discover-location-btn"
-            onClick={handleUseMyLocation}
-            disabled={locationLoading}
-          >
-            {locationLoading ? "Locating..." : userLocation ? "📍 Near Me" : "Use My Location"}
-          </button>
+      {/* PROMOTIONAL BANNER (if enabled) */}
+      {bannerEnabled && cmsContent?.banner && (
+        <div 
+          className="discover-banner"
+          style={{
+            background: cmsContent.banner.backgroundImage 
+              ? `url(${cmsContent.banner.backgroundImage.startsWith('http') ? cmsContent.banner.backgroundImage : `http://localhost:5000/${cmsContent.banner.backgroundImage}`}) center/cover`
+              : cmsContent.banner.backgroundColor || '#3b82f6',
+          }}
+        >
+          <div className="discover-banner-content">
+            <h2>{cmsContent.banner.title}</h2>
+            <p>{cmsContent.banner.description}</p>
+            {cmsContent.banner.buttonText && cmsContent.banner.buttonLink && (
+              <a href={cmsContent.banner.buttonLink} className="discover-banner-btn">
+                {cmsContent.banner.buttonText}
+              </a>
+            )}
+          </div>
         </div>
+      )}
+
+      {/* HEADER TITLE + SEARCH ROW */}
+      <div 
+        className="discover-header"
+        style={headerBgImage ? {
+          backgroundImage: `url(${headerBgImage.startsWith('http') ? headerBgImage : `http://localhost:5000/${headerBgImage}`})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        } : {}}
+      >
+        <h1>{headerTitle}</h1>
+        <p>{headerSubtitle}</p>
+
+        {showSearch && (
+          <div className="discover-search-row">
+            <input
+              type="text"
+              className="discover-search-input"
+              placeholder="Search by name, location, or sport..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+            />
+            <button 
+              className="discover-location-btn"
+              onClick={handleUseMyLocation}
+              disabled={locationLoading}
+            >
+              {locationLoading ? "Locating..." : userLocation ? "📍 Near Me" : "Use My Location"}
+            </button>
+          </div>
+        )}
         {locationError && (
           <p style={{ color: "#dc2626", fontSize: 13, marginTop: 4 }}>{locationError}</p>
         )}
@@ -547,23 +782,35 @@ export default function Discover() {
         <aside className="filters-sidebar">
           <h3>Filters</h3>
 
+          {/* Sport Filter - Dynamic from database */}
           <div className="filter-block">
-            <span className="filter-label">Sport</span>
+            <span className="filter-label">{filterLabels.sport || "Sport"}</span>
             <select
               value={sport}
               onChange={(e) => setSport(e.target.value)}
               className="filter-select"
             >
               <option value="">All sports</option>
-              <option value="Football">Football</option>
-              <option value="Basketball">Basketball</option>
-              <option value="Padel">Padel</option>
-              <option value="Tennis">Tennis</option>
+              {sportTypes.length > 0 ? (
+                sportTypes.map((st) => (
+                  <option key={st._id || st.name} value={st.name}>
+                    {st.icon ? `${st.icon} ` : ""}{st.name}
+                  </option>
+                ))
+              ) : (
+                // Fallback to static list
+                SPORTS_LIST.map((st) => (
+                  <option key={st.name} value={st.name}>
+                    {st.icon ? `${st.icon} ` : ""}{st.name}
+                  </option>
+                ))
+              )}
             </select>
           </div>
 
+          {/* City Filter - EXACT same options as Home page */}
           <div className="filter-block">
-            <span className="filter-label">City</span>
+            <span className="filter-label">{filterLabels.city || "City"}</span>
             <select
               value={city}
               onChange={(e) => setCity(e.target.value)}
@@ -571,9 +818,64 @@ export default function Discover() {
             >
               <option value="">All cities</option>
               <option value="Beirut">Beirut</option>
+              <option value="Tripoli">Tripoli</option>
               <option value="Sidon">Sidon</option>
               <option value="Jounieh">Jounieh</option>
-              <option value="Tripoli">Tripoli</option>
+              <option value="Byblos">Byblos</option>
+              <option value="Zahle">Zahle</option>
+            </select>
+          </div>
+
+          {/* Area Filter - Text input */}
+          <div className="filter-block">
+            <span className="filter-label">{filterLabels.area || "Area"}</span>
+            <input
+              type="text"
+              value={area}
+              onChange={(e) => setArea(e.target.value)}
+              placeholder="Enter area..."
+              className="filter-input"
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                border: "1px solid #e2e8f0",
+                borderRadius: 8,
+                fontSize: 14,
+              }}
+            />
+          </div>
+
+          {/* Date Filter - Same as Home page */}
+          <div className="filter-block">
+            <span className="filter-label">{filterLabels.date || "Date"}</span>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              min={new Date().toISOString().split("T")[0]}
+              className="filter-input"
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                border: "1px solid #e2e8f0",
+                borderRadius: 8,
+                fontSize: 14,
+              }}
+            />
+          </div>
+
+          {/* Time Filter - Same as Home page (06:00 - 20:00) */}
+          <div className="filter-block">
+            <span className="filter-label">Time</span>
+            <select
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+              className="filter-select"
+            >
+              <option value="">Any time</option>
+              {TIME_SLOTS.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
             </select>
           </div>
 
@@ -598,9 +900,9 @@ export default function Discover() {
               className="filter-select"
             >
               <option value="">Any surface</option>
-              <option value="Turf">Turf</option>
-              <option value="Grass">Grass</option>
-              <option value="Hardwood">Hardwood</option>
+              {SURFACE_TYPES.map((surface) => (
+                <option key={surface} value={surface}>{surface}</option>
+              ))}
             </select>
           </div>
 
@@ -630,19 +932,6 @@ export default function Discover() {
               placeholder="Owner name..."
               className="filter-input"
             />
-          </div>
-
-          <div className="filter-block">
-            <span className="filter-label">Availability Date</span>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="filter-input"
-            />
-            <small className="filter-hint">
-              Availability logic can be added later in bookings module.
-            </small>
           </div>
 
           <div className="filter-block">
@@ -690,7 +979,9 @@ export default function Discover() {
             <div className="results-count">
               {loading
                 ? "Loading..."
-                : `${visibleFields.length} results found`}
+                : availabilityLoading
+                ? `Checking availability for ${date}...`
+                : `${visibleFields.length} results found${date ? ` for ${date}` : ""}`}
               {date && (
                 <span className="results-date">
                   &nbsp;· for <strong>{date}</strong>
@@ -760,7 +1051,14 @@ export default function Discover() {
           ) : loading ? (
             <p>Loading...</p>
           ) : visibleFields.length === 0 ? (
-            <p>No courts found.</p>
+            <div className="discover-no-results">
+              <div className="no-results-icon">🔍</div>
+              <h3>{noResultsTitle}</h3>
+              <p>{noResultsMessage}</p>
+              {cmsContent?.noResults?.showContactLink && (
+                <a href="/contact" className="no-results-link">Contact Us</a>
+              )}
+            </div>
           ) : (
             <div className="results-list">
               {visibleFields.map((field, index) => (
@@ -789,6 +1087,19 @@ export default function Discover() {
           )}
         </section>
       </div>
+
+      {/* CTA Section (if enabled) */}
+      {ctaEnabled && cmsContent?.ctaSection && (
+        <div className="discover-cta-section">
+          <h2>{cmsContent.ctaSection.title}</h2>
+          <p>{cmsContent.ctaSection.description}</p>
+          {cmsContent.ctaSection.buttonText && cmsContent.ctaSection.buttonLink && (
+            <a href={cmsContent.ctaSection.buttonLink} className="discover-cta-btn">
+              {cmsContent.ctaSection.buttonText}
+            </a>
+          )}
+        </div>
+      )}
     </div>
   );
 }

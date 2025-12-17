@@ -183,25 +183,25 @@ export const getOwnerDashboardOverview = async (req, res) => {
     );
 
     // ============================================================
-    // EARNINGS CALCULATION (PDR-COMPLIANT)
+    // EARNINGS CALCULATION (UPDATED)
     // 
-    // RULE: Earnings are ONLY calculated from COMPLETED bookings
+    // RULE: Earnings are calculated from CONFIRMED and COMPLETED bookings
     // - Pending bookings: No earnings (not yet confirmed)
-    // - Confirmed bookings: No earnings (not yet completed)
-    // - Completed bookings: Count towards earnings
+    // - Confirmed bookings: COUNT towards earnings (transaction created)
+    // - Completed bookings: COUNT towards earnings (confirmed + service delivered)
     // - Cancelled bookings: No earnings (refunded)
     // ============================================================
 
     let totalEarningsThisMonth = 0;
     let totalEarningsLastMonth = 0;
-    let completedBookings = 0;  // Bookings that contribute to earnings
-    let confirmedBookings = 0;  // Confirmed but not yet completed
+    let completedBookings = 0;  // Service delivered
+    let confirmedBookings = 0;  // Confirmed (payment received)
     let pendingBookings = 0;    // Awaiting confirmation
     let cancelledBookings = 0;  // Cancelled (refunded)
     
-    // PDR 2.5: Track fields with at least one completed booking
-    const fieldsWithCompletedBookings = new Set();
-    let lastMonthCompletedBookings = 0;
+    // Track fields with earnings-generating bookings
+    const fieldsWithEarningsBookings = new Set();
+    let lastMonthEarningsBookings = 0;
 
     // Get all bookings for counting
     const allBookings = await Booking.find({
@@ -216,15 +216,16 @@ export const getOwnerDashboardOverview = async (req, res) => {
       if (d >= startOfMonth && d <= endOfMonth) {
         switch (b.status) {
           case "completed":
-            // ONLY completed bookings count towards earnings
+            // Completed bookings count towards earnings
             totalEarningsThisMonth += b.totalPrice || 0;
             completedBookings++;
-            // Track which fields have completed bookings (this month)
-            fieldsWithCompletedBookings.add(b.field.toString());
+            fieldsWithEarningsBookings.add(b.field.toString());
             break;
           case "confirmed":
-            // Confirmed but not completed - no earnings yet
+            // CONFIRMED bookings NOW count towards earnings (transaction created on confirm)
+            totalEarningsThisMonth += b.totalPrice || 0;
             confirmedBookings++;
+            fieldsWithEarningsBookings.add(b.field.toString());
             break;
           case "pending":
             // Pending - no earnings
@@ -237,10 +238,11 @@ export const getOwnerDashboardOverview = async (req, res) => {
         }
       }
       
-      // Last month earnings (ONLY completed bookings)
-      if (d >= startOfLastMonth && d <= endOfLastMonth && b.status === "completed") {
+      // Last month earnings (confirmed AND completed bookings)
+      if (d >= startOfLastMonth && d <= endOfLastMonth && 
+          (b.status === "completed" || b.status === "confirmed")) {
         totalEarningsLastMonth += b.totalPrice || 0;
-        lastMonthCompletedBookings++;
+        lastMonthEarningsBookings++;
       }
     });
 
@@ -293,8 +295,8 @@ export const getOwnerDashboardOverview = async (req, res) => {
         cancelledBookings,   // Refunded
         
         // PDR 2.5: Fields with completed bookings
-        activeFieldsWithEarnings: fieldsWithCompletedBookings.size,
-        lastMonthCompletedBookings,
+        activeFieldsWithEarnings: fieldsWithEarningsBookings.size,
+        lastMonthEarningsBookings,
         
         // Legacy aliases for backward compatibility
         paidBookings: completedBookings,

@@ -4,6 +4,7 @@ import Category from "../models/Category.js";
 import PromoCode from "../models/PromoCode.js";
 import HomepageContent from "../models/HomepageContent.js";
 import FooterContent from "../models/FooterContent.js";
+import DiscoverContent from "../models/DiscoverContent.js";
 import fs from "fs";
 import path from "path";
 
@@ -295,6 +296,44 @@ export const updateFooterContent = async (req, res) => {
     res.json({ message: "Footer content updated", content });
   } catch (err) {
     console.error("Update footer content error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ============================================================
+// DISCOVER PAGE CONTENT
+// ============================================================
+export const getDiscoverContent = async (req, res) => {
+  try {
+    const content = await DiscoverContent.getContent();
+    res.json({ content });
+  } catch (err) {
+    console.error("Get discover content error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const updateDiscoverContent = async (req, res) => {
+  try {
+    const content = await DiscoverContent.getContent();
+    
+    // Update allowed sections
+    const allowedSections = [
+      "header", "banner", "featured", "categories", 
+      "filterLabels", "noResults", "ctaSection", "seo"
+    ];
+    
+    allowedSections.forEach((section) => {
+      if (req.body[section] !== undefined) {
+        content[section] = req.body[section];
+      }
+    });
+    
+    await content.save();
+    
+    res.json({ message: "Discover content updated", content });
+  } catch (err) {
+    console.error("Update discover content error:", err);
     res.status(500).json({ message: "Server error" });
   }
 };

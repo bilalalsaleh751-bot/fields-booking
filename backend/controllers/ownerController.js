@@ -110,9 +110,10 @@ export const ownerLogin = async (req, res) => {
       return res.status(400).json({ message: "Invalid email or password" });
     }
 
-    const cleanStatus = (owner.status || "").trim();
+    // Normalize status - trim whitespace AND convert to lowercase for case-insensitive comparison
+    const cleanStatus = (owner.status || "").trim().toLowerCase();
 
-    // STATUS HANDLING — Per PDR
+    // STATUS HANDLING — Per PDR (case-insensitive)
     if (cleanStatus === "pending" || cleanStatus === "pending_review") {
       return res.json({ status: "pending" });
     }
@@ -133,18 +134,23 @@ export const ownerLogin = async (req, res) => {
     }
 
     // APPROVED → return token + owner info
-    const token = jwt.sign({ id: owner._id }, process.env.JWT_SECRET || "jwtsecret", {
-      expiresIn: "7d",
-    });
+    // CRITICAL: Include type and role in JWT for /api/auth/me to work correctly
+    const token = jwt.sign(
+      { id: owner._id, role: "owner", type: "owner" },
+      process.env.JWT_SECRET || "jwtsecret",
+      { expiresIn: "7d" }
+    );
 
     return res.json({
       status: "approved",
       token,
+      role: "owner", // Include role for frontend consistency
       owner: {
-        _id: owner._id,              // 🔥 أهم سطر — dashboard يحتاجه
+        _id: owner._id,
         fullName: owner.fullName,
         email: owner.email,
         phone: owner.phone,
+        status: cleanStatus, // Return normalized (lowercase) status for frontend consistency
       },
     });
   } catch (err) {

@@ -1,9 +1,11 @@
 import "./../auth.css";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { useAuth } from "../../contexts/AuthContext";
 
 function OwnerLogin() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,10 +43,20 @@ function OwnerLogin() {
 
       // Handle different owner statuses from 200 responses
       if (data.status === "approved") {
-        // Approved - store auth data and navigate to dashboard
+        // Store ONLY owner tokens - don't affect other role sessions
+        // This allows multiple tabs with different roles
         localStorage.setItem("ownerToken", data.token);
         localStorage.setItem("ownerId", data.owner._id);
-        localStorage.setItem("ownerName", data.owner.fullName || "");
+        localStorage.setItem("ownerName", data.owner.fullName);
+        
+        // Also use AuthContext for state management
+        login(data.token, {
+          _id: data.owner._id,
+          name: data.owner.fullName,
+          email: data.owner.email,
+          role: "owner",
+          status: data.owner.status,
+        });
         navigate("/owner/dashboard");
       } 
       else if (data.status === "pending") {

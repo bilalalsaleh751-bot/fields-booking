@@ -1,15 +1,22 @@
 // src/dashboard/components/Sidebar.jsx
 import { NavLink, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { useAuth } from "../../contexts/AuthContext";
 
 function Sidebar() {
   const navigate = useNavigate();
+  const { auth, logout } = useAuth();
   const [ownerName, setOwnerName] = useState("");
 
   useEffect(() => {
-    const storedName = localStorage.getItem("ownerName");
-    if (storedName) setOwnerName(storedName);
-  }, []);
+    // Use auth context first, fallback to localStorage
+    if (auth?.name) {
+      setOwnerName(auth.name);
+    } else {
+      const storedName = localStorage.getItem("ownerName");
+      if (storedName) setOwnerName(storedName);
+    }
+  }, [auth]);
 
   const navItems = [
     { label: "Dashboard", icon: "📊", path: "/owner/dashboard" },
@@ -20,13 +27,33 @@ function Sidebar() {
     { label: "Settings", icon: "⚙️", path: "/owner/settings" },
   ];
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
+    // Clear ALL session tokens to prevent any session conflicts
+    // Owner tokens
     localStorage.removeItem("ownerToken");
-    localStorage.removeItem("ownerName");
     localStorage.removeItem("ownerId");
-    localStorage.removeItem("ownerRole");
-    navigate("/login");
-  };
+    localStorage.removeItem("ownerName");
+    
+    // User tokens (prevent auto-login as user after owner logout)
+    localStorage.removeItem("userToken");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userEmail");
+    
+    // Admin tokens
+    localStorage.removeItem("adminToken");
+    localStorage.removeItem("adminRole");
+    localStorage.removeItem("adminData");
+    
+    // Clear auth role
+    localStorage.removeItem("authRole");
+    
+    // Use AuthContext's full logout to clear auth state completely
+    logout();
+    
+    // Navigate to OWNER login page
+    navigate("/owner/login", { replace: true });
+  }, [logout, navigate]);
 
   return (
     <aside className="dashboard-sidebar">

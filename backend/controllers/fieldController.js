@@ -5,6 +5,16 @@ import path from "path";
 import Field from "../models/Field.js";
 import { createNotification } from "./notificationController.js";
 
+// Same cities as frontend (Discover page and Owner Fields)
+const VALID_CITIES = [
+  "Beirut",
+  "Tripoli",
+  "Sidon",
+  "Jounieh",
+  "Byblos",
+  "Zahle",
+];
+
 /* =========================================================
    CREATE FIELD (PDR 2.3 Phase 1 - Field Management)
 ========================================================= */
@@ -41,6 +51,27 @@ export const createField = async (req, res) => {
       });
     }
 
+    // Validate city is required and from valid list
+    if (!city) {
+      return res.status(400).json({
+        message: "City is required",
+      });
+    }
+
+    // Normalize city (trim and match case-insensitively)
+    const normalizedCity = city.trim();
+    const validCity = VALID_CITIES.find(
+      (c) => c.toLowerCase() === normalizedCity.toLowerCase()
+    );
+    
+    if (!validCity) {
+      return res.status(400).json({
+        message: `Invalid city selected. Valid cities: ${VALID_CITIES.join(", ")}`,
+      });
+    }
+
+    // Area is optional free text (no validation needed)
+
     // Validate pricePerHour is a number
     const price = Number(pricePerHour);
     if (isNaN(price) || price < 0) {
@@ -68,8 +99,8 @@ export const createField = async (req, res) => {
       sport: sportType || sport, // Backward compatibility
       pricePerHour: price,
       // Optional legacy fields
-      city: city || "",
-      area: area || "",
+      city: validCity, // Use the properly cased city from VALID_CITIES
+      area: area ? area.trim() : "",
       address: address || "",
       currency: currency || "USD",
       isIndoor: Boolean(isIndoor),

@@ -14,9 +14,10 @@ function AdminCMS() {
   const [editItem, setEditItem] = useState(null);
   const [formData, setFormData] = useState({});
 
-  // Homepage/Footer content states
+  // Homepage/Footer/Discover content states
   const [homepageContent, setHomepageContent] = useState(null);
   const [footerContent, setFooterContent] = useState(null);
+  const [discoverContent, setDiscoverContent] = useState(null);
 
   const showToast = (type, message) => {
     setToast({ type, message });
@@ -35,6 +36,13 @@ function AdminCMS() {
         if (!res.ok) throw new Error("Failed to fetch homepage content");
         const result = await res.json();
         setHomepageContent(result.content);
+      } else if (activeTab === "discover") {
+        const res = await fetch("http://localhost:5000/api/admin/cms/discover", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error("Failed to fetch discover content");
+        const result = await res.json();
+        setDiscoverContent(result.content);
       } else if (activeTab === "footer") {
         const res = await fetch("http://localhost:5000/api/admin/cms/footer", {
           headers: { Authorization: `Bearer ${token}` },
@@ -42,6 +50,13 @@ function AdminCMS() {
         if (!res.ok) throw new Error("Failed to fetch footer content");
         const result = await res.json();
         setFooterContent(result.content);
+      } else if (activeTab === "sport-types") {
+        const res = await fetch("http://localhost:5000/api/admin/cms/sport-types", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error("Failed to fetch sport types");
+        const result = await res.json();
+        setData(result.sportTypes || []);
       } else {
         const res = await fetch(`http://localhost:5000/api/admin/cms/${activeTab}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -119,6 +134,42 @@ function AdminCMS() {
     }
   };
 
+  // Save discover content
+  const handleSaveDiscover = async () => {
+    setSaving(true);
+    try {
+      const token = localStorage.getItem("adminToken");
+      const res = await fetch("http://localhost:5000/api/admin/cms/discover", {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(discoverContent),
+      });
+
+      if (!res.ok) throw new Error("Failed to save discover content");
+
+      showToast("success", "Discover page content saved");
+      fetchData();
+    } catch (err) {
+      showToast("error", err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Helper to update nested discover content
+  const updateDiscoverContent = (section, field, value) => {
+    setDiscoverContent((prev) => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [field]: value,
+      },
+    }));
+  };
+
   const handleCreate = () => {
     setEditItem(null);
     setFormData(getDefaultForm());
@@ -136,7 +187,8 @@ function AdminCMS() {
 
     try {
       const token = localStorage.getItem("adminToken");
-      const endpoint = activeTab === "promo-codes" ? "promo-codes" : activeTab;
+      let endpoint = activeTab === "promo-codes" ? "promo-codes" : activeTab;
+      if (activeTab === "sport-types") endpoint = "sport-types";
       const res = await fetch(`http://localhost:5000/api/admin/cms/${endpoint}/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
@@ -154,7 +206,8 @@ function AdminCMS() {
   const handleSave = async () => {
     try {
       const token = localStorage.getItem("adminToken");
-      const endpoint = activeTab === "promo-codes" ? "promo-codes" : activeTab;
+      let endpoint = activeTab === "promo-codes" ? "promo-codes" : activeTab;
+      if (activeTab === "sport-types") endpoint = "sport-types";
       const method = editItem ? "PUT" : "POST";
       const url = editItem
         ? `http://localhost:5000/api/admin/cms/${endpoint}/${editItem._id}`
@@ -207,10 +260,12 @@ function AdminCMS() {
 
   const tabs = [
     { id: "homepage", label: "Homepage" },
+    { id: "discover", label: "Discover Page" },
     { id: "footer", label: "Footer" },
     { id: "banners", label: "Banners" },
     { id: "faqs", label: "FAQs" },
     { id: "categories", label: "Categories" },
+    { id: "sport-types", label: "Sport Types" },
     { id: "promo-codes", label: "Promo Codes" },
   ];
 
@@ -389,6 +444,259 @@ function AdminCMS() {
                 style={{ marginTop: 8 }}
               >
                 {saving ? "Saving..." : "Save Homepage Content"}
+              </button>
+            </div>
+          )}
+
+          {/* ============ DISCOVER PAGE TAB ============ */}
+          {activeTab === "discover" && discoverContent && (
+            <div>
+              {/* Header Section */}
+              <div className="admin-card" style={{ marginBottom: 20 }}>
+                <div className="admin-card-header">
+                  <h3 className="admin-card-title">📝 Page Header</h3>
+                </div>
+                <div className="admin-form-group">
+                  <label className="admin-form-label">Title</label>
+                  <input
+                    className="admin-form-input"
+                    value={discoverContent.header?.title || ""}
+                    onChange={(e) => updateDiscoverContent("header", "title", e.target.value)}
+                    placeholder="Discover Sports Courts"
+                  />
+                </div>
+                <div className="admin-form-group">
+                  <label className="admin-form-label">Subtitle</label>
+                  <input
+                    className="admin-form-input"
+                    value={discoverContent.header?.subtitle || ""}
+                    onChange={(e) => updateDiscoverContent("header", "subtitle", e.target.value)}
+                    placeholder="Find and book the perfect court for your game"
+                  />
+                </div>
+                <div className="admin-form-group">
+                  <label className="admin-form-label">Background Image</label>
+                  <ImageUpload
+                    currentImage={discoverContent.header?.backgroundImage}
+                    onUpload={(url) => updateDiscoverContent("header", "backgroundImage", url)}
+                    onRemove={() => updateDiscoverContent("header", "backgroundImage", "")}
+                  />
+                </div>
+                <div className="admin-form-group">
+                  <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      checked={discoverContent.header?.showSearch !== false}
+                      onChange={(e) => updateDiscoverContent("header", "showSearch", e.target.checked)}
+                    />
+                    <span>Show Search Bar</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Promotional Banner */}
+              <div className="admin-card" style={{ marginBottom: 20 }}>
+                <div className="admin-card-header">
+                  <h3 className="admin-card-title">📣 Promotional Banner</h3>
+                </div>
+                <div className="admin-form-group">
+                  <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      checked={discoverContent.banner?.isEnabled || false}
+                      onChange={(e) => updateDiscoverContent("banner", "isEnabled", e.target.checked)}
+                    />
+                    <span>Enable Promotional Banner</span>
+                  </label>
+                </div>
+                {discoverContent.banner?.isEnabled && (
+                  <>
+                    <div className="admin-form-group">
+                      <label className="admin-form-label">Banner Title</label>
+                      <input
+                        className="admin-form-input"
+                        value={discoverContent.banner?.title || ""}
+                        onChange={(e) => updateDiscoverContent("banner", "title", e.target.value)}
+                        placeholder="Special Offer!"
+                      />
+                    </div>
+                    <div className="admin-form-group">
+                      <label className="admin-form-label">Banner Description</label>
+                      <textarea
+                        className="admin-form-textarea"
+                        value={discoverContent.banner?.description || ""}
+                        onChange={(e) => updateDiscoverContent("banner", "description", e.target.value)}
+                        placeholder="Get 20% off your first booking"
+                        rows={2}
+                      />
+                    </div>
+                    <div className="admin-form-group">
+                      <label className="admin-form-label">Button Text</label>
+                      <input
+                        className="admin-form-input"
+                        value={discoverContent.banner?.buttonText || ""}
+                        onChange={(e) => updateDiscoverContent("banner", "buttonText", e.target.value)}
+                        placeholder="Learn More"
+                      />
+                    </div>
+                    <div className="admin-form-group">
+                      <label className="admin-form-label">Button Link</label>
+                      <input
+                        className="admin-form-input"
+                        value={discoverContent.banner?.buttonLink || ""}
+                        onChange={(e) => updateDiscoverContent("banner", "buttonLink", e.target.value)}
+                        placeholder="/offers"
+                      />
+                    </div>
+                    <div className="admin-form-group">
+                      <label className="admin-form-label">Background Color</label>
+                      <input
+                        type="color"
+                        value={discoverContent.banner?.backgroundColor || "#3b82f6"}
+                        onChange={(e) => updateDiscoverContent("banner", "backgroundColor", e.target.value)}
+                        style={{ width: 60, height: 36, padding: 2, border: "1px solid #e2e8f0", borderRadius: 6 }}
+                      />
+                    </div>
+                    <div className="admin-form-group">
+                      <label className="admin-form-label">Background Image (optional)</label>
+                      <ImageUpload
+                        currentImage={discoverContent.banner?.backgroundImage}
+                        onUpload={(url) => updateDiscoverContent("banner", "backgroundImage", url)}
+                        onRemove={() => updateDiscoverContent("banner", "backgroundImage", "")}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* No Results Section */}
+              <div className="admin-card" style={{ marginBottom: 20 }}>
+                <div className="admin-card-header">
+                  <h3 className="admin-card-title">🔍 No Results Message</h3>
+                </div>
+                <div className="admin-form-group">
+                  <label className="admin-form-label">Title</label>
+                  <input
+                    className="admin-form-input"
+                    value={discoverContent.noResults?.title || ""}
+                    onChange={(e) => updateDiscoverContent("noResults", "title", e.target.value)}
+                    placeholder="No Courts Found"
+                  />
+                </div>
+                <div className="admin-form-group">
+                  <label className="admin-form-label">Message</label>
+                  <textarea
+                    className="admin-form-textarea"
+                    value={discoverContent.noResults?.message || ""}
+                    onChange={(e) => updateDiscoverContent("noResults", "message", e.target.value)}
+                    placeholder="Try adjusting your filters..."
+                    rows={2}
+                  />
+                </div>
+                <div className="admin-form-group">
+                  <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      checked={discoverContent.noResults?.showContactLink !== false}
+                      onChange={(e) => updateDiscoverContent("noResults", "showContactLink", e.target.checked)}
+                    />
+                    <span>Show Contact Link</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* CTA Section */}
+              <div className="admin-card" style={{ marginBottom: 20 }}>
+                <div className="admin-card-header">
+                  <h3 className="admin-card-title">📢 Call-to-Action Section</h3>
+                </div>
+                <div className="admin-form-group">
+                  <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      checked={discoverContent.ctaSection?.isEnabled !== false}
+                      onChange={(e) => updateDiscoverContent("ctaSection", "isEnabled", e.target.checked)}
+                    />
+                    <span>Enable CTA Section</span>
+                  </label>
+                </div>
+                {discoverContent.ctaSection?.isEnabled !== false && (
+                  <>
+                    <div className="admin-form-group">
+                      <label className="admin-form-label">Title</label>
+                      <input
+                        className="admin-form-input"
+                        value={discoverContent.ctaSection?.title || ""}
+                        onChange={(e) => updateDiscoverContent("ctaSection", "title", e.target.value)}
+                        placeholder="Can't find what you're looking for?"
+                      />
+                    </div>
+                    <div className="admin-form-group">
+                      <label className="admin-form-label">Description</label>
+                      <textarea
+                        className="admin-form-textarea"
+                        value={discoverContent.ctaSection?.description || ""}
+                        onChange={(e) => updateDiscoverContent("ctaSection", "description", e.target.value)}
+                        placeholder="Contact us and we'll help you find the perfect court"
+                        rows={2}
+                      />
+                    </div>
+                    <div className="admin-form-group">
+                      <label className="admin-form-label">Button Text</label>
+                      <input
+                        className="admin-form-input"
+                        value={discoverContent.ctaSection?.buttonText || ""}
+                        onChange={(e) => updateDiscoverContent("ctaSection", "buttonText", e.target.value)}
+                        placeholder="Contact Us"
+                      />
+                    </div>
+                    <div className="admin-form-group">
+                      <label className="admin-form-label">Button Link</label>
+                      <input
+                        className="admin-form-input"
+                        value={discoverContent.ctaSection?.buttonLink || ""}
+                        onChange={(e) => updateDiscoverContent("ctaSection", "buttonLink", e.target.value)}
+                        placeholder="/contact"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* SEO Section */}
+              <div className="admin-card" style={{ marginBottom: 20 }}>
+                <div className="admin-card-header">
+                  <h3 className="admin-card-title">🔎 SEO Settings</h3>
+                </div>
+                <div className="admin-form-group">
+                  <label className="admin-form-label">Meta Title</label>
+                  <input
+                    className="admin-form-input"
+                    value={discoverContent.seo?.metaTitle || ""}
+                    onChange={(e) => updateDiscoverContent("seo", "metaTitle", e.target.value)}
+                    placeholder="Discover Sports Courts | Sport Lebanon"
+                  />
+                </div>
+                <div className="admin-form-group">
+                  <label className="admin-form-label">Meta Description</label>
+                  <textarea
+                    className="admin-form-textarea"
+                    value={discoverContent.seo?.metaDescription || ""}
+                    onChange={(e) => updateDiscoverContent("seo", "metaDescription", e.target.value)}
+                    placeholder="Find and book sports courts across Lebanon..."
+                    rows={2}
+                  />
+                </div>
+              </div>
+
+              {/* Save Button */}
+              <button
+                className="admin-btn admin-btn-primary"
+                onClick={handleSaveDiscover}
+                disabled={saving}
+                style={{ marginTop: 8 }}
+              >
+                {saving ? "Saving..." : "Save Discover Page Content"}
               </button>
             </div>
           )}
@@ -584,6 +892,14 @@ function AdminCMS() {
                             <th>Actions</th>
                           </>
                         )}
+                        {activeTab === "sport-types" && (
+                          <>
+                            <th>Name</th>
+                            <th>Sort Order</th>
+                            <th>Active</th>
+                            <th>Actions</th>
+                          </>
+                        )}
                         {activeTab === "promo-codes" && (
                           <>
                             <th>Code</th>
@@ -616,6 +932,16 @@ function AdminCMS() {
                             <>
                               <td style={{ fontWeight: 500 }}>{item.name}</td>
                               <td>{item.slug}</td>
+                              <td>{item.isActive ? "✅" : "❌"}</td>
+                            </>
+                          )}
+                          {activeTab === "sport-types" && (
+                            <>
+                              <td style={{ fontWeight: 500 }}>
+                                {item.icon && `${item.icon} `}
+                                {item.name}
+                              </td>
+                              <td>{item.sortOrder}</td>
                               <td>{item.isActive ? "✅" : "❌"}</td>
                             </>
                           )}
@@ -767,6 +1093,37 @@ function AdminCMS() {
                       className="admin-form-input"
                       value={formData.icon || ""}
                       onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+                    />
+                  </div>
+                </>
+              )}
+              {activeTab === "sport-types" && (
+                <>
+                  <div className="admin-form-group">
+                    <label className="admin-form-label">Name *</label>
+                    <input
+                      className="admin-form-input"
+                      value={formData.name || ""}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="admin-form-group">
+                    <label className="admin-form-label">Icon (emoji)</label>
+                    <input
+                      className="admin-form-input"
+                      value={formData.icon || ""}
+                      onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+                      placeholder="⚽ 🏀 🎾"
+                    />
+                  </div>
+                  <div className="admin-form-group">
+                    <label className="admin-form-label">Sort Order</label>
+                    <input
+                      type="number"
+                      className="admin-form-input"
+                      value={formData.sortOrder || 0}
+                      onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
                     />
                   </div>
                 </>

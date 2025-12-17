@@ -32,14 +32,14 @@ export const getOwnerSettings = async (req, res) => {
     const fields = await Field.find({ owner: ownerId });
     const fieldIds = fields.map((f) => f._id);
 
-    // Calculate total earnings from COMPLETED bookings only
+    // Calculate total earnings from CONFIRMED and COMPLETED bookings
     let totalEarnings = 0;
     if (fieldIds.length > 0) {
-      const completedBookings = await Booking.find({
+      const earningsBookings = await Booking.find({
         field: { $in: fieldIds },
-        status: "completed",
+        status: { $in: ["confirmed", "completed"] }, // Both confirmed and completed count
       });
-      totalEarnings = completedBookings.reduce(
+      totalEarnings = earningsBookings.reduce(
         (sum, b) => sum + (b.totalPrice || 0),
         0
       );
