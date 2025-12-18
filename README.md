@@ -1,4 +1,4 @@
-<img src="/sport.avif" width="900" alt="Project Preview">
+<img src="logo.png" width="900" alt="Project Preview">
 
 # Fields Booking Platform
 
