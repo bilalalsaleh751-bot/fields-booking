@@ -158,47 +158,47 @@ After running `seedAdmin.js`, you can log in with:
 ## Screenshots
 
 ### Homepage
-![Homepage](frontend/public/screenshots/home.png)
+![Homepage](frontend/public/screenshots/home.webp)
 *Landing page showcasing featured sports fields and platform overview*
 
 ### Discover Page
-![Discover](frontend/public/screenshots/discover.png)
+![Discover](frontend/public/screenshots/discover.webp)
 *Browse and search available sports fields by sport type, location, and filters*
 
 ### Booking Flow
-![Booking Flow](frontend/public/screenshots/book-flow.png)
+![Booking Flow](frontend/public/screenshots/book-flow.webp)
 *Step-by-step booking process for selecting date, time, and confirming reservation*
 
 ### Booking Confirmation
-![Booking Confirmation](frontend/public/screenshots/booking-confirmation.png)
+![Booking Confirmation](frontend/public/screenshots/booking-confirmation.webp)
 *Confirmation page after successful booking with booking details*
 
 ### User Dashboard
-![User Dashboard](frontend/public/screenshots/user-dashboard.png)
+![User Dashboard](frontend/public/screenshots/user-dashboard.webp)
 *User account dashboard showing booking history and profile management*
 
 ### Owner Dashboard
-![Owner Dashboard](frontend/public/screenshots/owner-dashboard.png)
+![Owner Dashboard](frontend/public/screenshots/owner-dashboard.webp)
 *Field owner dashboard with field management, bookings, and analytics*
 
 ### Add Field
-![Add Field](frontend/public/screenshots/add-field.png)
+![Add Field](frontend/public/screenshots/add-field.webp)
 *Interface for field owners to add new sports fields with details and images*
 
 ### Availability Management
-![Availability](frontend/public/screenshots/availability.png)
+![Availability](frontend/public/screenshots/availability.webp)
 *Time slot and availability management interface for field owners*
 
 ### Admin Dashboard
-![Admin Dashboard](frontend/public/screenshots/admin-dashboard.png)
+![Admin Dashboard](frontend/public/screenshots/admin-dashboard.webp)
 *Administrative dashboard with platform overview and management tools*
 
 ### Financial Reports
-![Financial Report](frontend/public/screenshots/financial-report.png)
+![Financial Report](frontend/public/screenshots/financial-report.webp)
 *Financial analytics and revenue reports for owners and administrators*
 
 ### CMS Editor
-![CMS Editor](frontend/public/screenshots/cms-editor.png)
+![CMS Editor](frontend/public/screenshots/cms-editor.webp)
 *Content management system for admins to edit homepage, footer, and platform content*
 
 ## Project Structure
