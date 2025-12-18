@@ -1,4 +1,4 @@
-<img src="frontend/public/logo.png" width="900" alt="Project Preview">
+<img src="frontend/public/vite.svg" width="900" alt="Project Preview">
 
 
 # Fields Booking Platform
