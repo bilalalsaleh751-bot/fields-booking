@@ -1,7 +1,7 @@
 // src/admin/components/AdminHeader.jsx
 import { useLocation } from "react-router-dom";
 
-function AdminHeader() {
+function AdminHeader({ onMenuToggle, isMenuOpen }) {
   const location = useLocation();
 
   const getPageTitle = () => {
@@ -19,6 +19,13 @@ function AdminHeader() {
 
   return (
     <header className="admin-header">
+      <button 
+        className={`admin-mobile-menu-toggle ${isMenuOpen ? 'active' : ''}`}
+        onClick={onMenuToggle}
+        aria-label="Toggle menu"
+      >
+        {isMenuOpen ? '✕' : '☰'}
+      </button>
       <h1 className="admin-page-title">{getPageTitle()}</h1>
       <div className="admin-header-actions">
         <span className="admin-date">

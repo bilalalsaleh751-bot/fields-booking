@@ -704,21 +704,75 @@
 }
 
 /* RESPONSIVE */
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .booking-flow-page {
+    padding: 20px;
+  }
+
+  .booking-card {
+    padding: 20px;
+  }
+
+  .booking-form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .booking-slots-grid {
+    grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
+  }
+}
+
+/* Mobile and Tablet */
 @media (max-width: 768px) {
   .booking-flow-page {
     padding: 16px;
   }
 
+  .booking-flow-header h1 {
+    font-size: 22px;
+  }
+
+  .booking-flow-subtitle {
+    font-size: 13px;
+  }
+
   .booking-stepper {
     padding: 6px 8px;
+    gap: 2px;
+  }
+
+  .booking-step-circle {
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
   }
 
   .booking-step-label {
     display: none;
   }
 
+  .booking-step-line {
+    min-width: 8px;
+  }
+
+  .booking-card {
+    padding: 18px;
+    border-radius: 16px;
+  }
+
+  .booking-card-title {
+    font-size: 18px;
+  }
+
+  .booking-card-subtitle {
+    font-size: 13px;
+  }
+
   .booking-form-grid {
     grid-template-columns: 1fr;
+    gap: 10px;
   }
 
   .booking-form-grid-2 {
@@ -727,32 +781,192 @@
 
   .booking-options-grid {
     grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .booking-option-card {
+    padding: 10px;
+  }
+
+  .booking-option-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+
+  .booking-option-title {
+    font-size: 13px;
+  }
+
+  .booking-option-subtitle {
+    font-size: 10px;
+  }
+
+  .booking-slots-grid {
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    gap: 6px;
+  }
+
+  .booking-slot-btn {
+    padding: 6px 2px;
+    min-height: 44px;
+    font-size: 12px;
   }
 
   .booking-review-box {
     grid-template-columns: 1fr;
+    gap: 6px 16px;
+    padding: 14px;
+  }
+
+  .booking-review-row {
+    font-size: 12px;
+    padding: 5px 0;
   }
 
   .booking-actions {
     flex-direction: column-reverse;
+    gap: 10px;
   }
 
   .booking-primary-btn,
   .booking-secondary-btn {
     width: 100%;
+    padding: 14px 20px;
   }
   
+  .booking-confirmation-container {
+    padding: 16px;
+  }
+
   .booking-confirmation-card {
     padding: 32px 24px;
+    border-radius: 20px;
   }
   
   .confirmation-title {
     font-size: 24px;
+  }
+
+  .confirmation-subtitle {
+    font-size: 14px;
   }
   
   .confirmation-icon {
     width: 70px;
     height: 70px;
     font-size: 36px;
+  }
+
+  .confirmation-details {
+    padding: 16px;
+  }
+
+  .confirmation-row {
+    padding: 8px 0;
+  }
+
+  .confirmation-label {
+    font-size: 12px;
+  }
+
+  .confirmation-value {
+    font-size: 13px;
+  }
+
+  .confirmation-row.highlight .confirmation-value {
+    font-size: 16px;
+  }
+
+  .confirmation-notice {
+    padding: 12px;
+  }
+
+  .confirmation-notice p {
+    font-size: 12px;
+  }
+
+  .confirmation-btn {
+    padding: 12px 20px;
+    font-size: 14px;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+  .booking-flow-page {
+    padding: 12px;
+  }
+
+  .booking-flow-header h1 {
+    font-size: 20px;
+  }
+
+  .booking-stepper {
+    padding: 4px 6px;
+  }
+
+  .booking-step-circle {
+    width: 22px;
+    height: 22px;
+    font-size: 10px;
+  }
+
+  .booking-card {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .booking-card-title {
+    font-size: 16px;
+  }
+
+  .booking-slots-grid {
+    grid-template-columns: repeat(auto-fill, minmax(65px, 1fr));
+    gap: 5px;
+  }
+
+  .booking-slot-btn {
+    padding: 5px 1px;
+    min-height: 40px;
+    font-size: 11px;
+  }
+
+  .booking-review-box {
+    padding: 12px;
+  }
+
+  .booking-confirmation-card {
+    padding: 24px 20px;
+  }
+  
+  .confirmation-title {
+    font-size: 22px;
+  }
+  
+  .confirmation-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 32px;
+    margin-bottom: 20px;
+  }
+
+  .confirmation-details {
+    padding: 14px;
+  }
+}
+
+/* Extra Small Mobile */
+@media (max-width: 360px) {
+  .booking-flow-page {
+    padding: 10px;
+  }
+
+  .booking-card {
+    padding: 14px;
+  }
+
+  .booking-slots-grid {
+    grid-template-columns: repeat(3, 1fr);
   }
 }

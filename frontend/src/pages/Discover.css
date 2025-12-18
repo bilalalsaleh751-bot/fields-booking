@@ -531,22 +531,310 @@
   color: white;
 }
 
+/* ========================================
+   RESPONSIVE DESIGN
+======================================== */
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .discover-page {
+    padding: 24px 32px 50px;
+  }
+
+  .discover-layout {
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .filters-sidebar {
+    padding: 16px 14px 20px;
+  }
+
+  .discover-map {
+    height: 380px;
+  }
+}
+
+/* Mobile and Tablet */
 @media (max-width: 768px) {
+  .discover-page {
+    padding: 20px 16px 40px;
+  }
+
+  .discover-header {
+    margin: -20px -16px 20px;
+    padding: 24px 16px;
+  }
+
+  .discover-header h1 {
+    font-size: 26px;
+  }
+
+  .discover-header p {
+    font-size: 14px;
+  }
+
+  .discover-search-row {
+    flex-direction: column;
+    gap: 12px;
+    max-width: 100%;
+  }
+
+  .discover-search-input {
+    width: 100%;
+  }
+
+  .discover-location-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .discover-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .filters-sidebar {
+    order: 2;
+    position: sticky;
+    top: 80px;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .discover-results {
+    order: 1;
+    padding: 16px 18px 20px;
+  }
+
+  .results-top-row {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .results-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .view-switch {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .sort-select {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .discover-map {
+    height: 350px;
+    border-radius: 12px;
+  }
+
+  .results-list {
+    gap: 10px;
+  }
+
+  .court-row {
+    padding: 12px;
+  }
+
   .discover-banner {
-    margin: -20px -20px 20px;
+    margin: -20px -16px 20px;
     padding: 30px 20px;
   }
   
   .discover-banner h2 {
     font-size: 22px;
   }
+
+  .discover-banner p {
+    font-size: 14px;
+  }
   
   .discover-cta-section {
-    margin: 30px -20px -40px;
+    margin: 30px -16px -40px;
     padding: 40px 20px;
   }
   
   .discover-cta-section h2 {
     font-size: 22px;
+  }
+
+  .discover-cta-section p {
+    font-size: 14px;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+  .discover-page {
+    padding: 16px 12px 32px;
+  }
+
+  .discover-header {
+    margin: -16px -12px 16px;
+    padding: 20px 12px;
+  }
+
+  .discover-header h1 {
+    font-size: 22px;
+  }
+
+  .discover-search-row {
+    gap: 10px;
+  }
+
+  .discover-search-input {
+    height: 40px;
+    line-height: 38px;
+    font-size: 13px;
+  }
+
+  .discover-location-btn {
+    height: 40px;
+    font-size: 13px;
+    padding: 8px 16px;
+  }
+
+  .filters-sidebar {
+    padding: 14px 12px 18px;
+    border-radius: 14px;
+  }
+
+  .filters-sidebar h3 {
+    font-size: 16px;
+    margin-bottom: 10px;
+  }
+
+  .filter-block {
+    margin-bottom: 14px;
+  }
+
+  .filter-label {
+    font-size: 12px;
+  }
+
+  .filter-select,
+  .filter-input {
+    height: 38px;
+    font-size: 13px;
+    padding: 7px 11px;
+  }
+
+  .price-range-row {
+    font-size: 12px;
+  }
+
+  .filters-apply-btn {
+    padding: 12px 0;
+    font-size: 14px;
+  }
+
+  .discover-results {
+    padding: 14px 16px 18px;
+    border-radius: 14px;
+  }
+
+  .results-count {
+    font-size: 13px;
+  }
+
+  .results-date {
+    font-size: 12px;
+  }
+
+  .view-switch-btn {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+
+  .sort-select {
+    height: 34px;
+    line-height: 31px;
+    font-size: 12px;
+    padding-right: 28px;
+  }
+
+  .discover-map {
+    height: 300px;
+    border-radius: 10px;
+  }
+
+  .court-row {
+    padding: 10px;
+    border-radius: 12px;
+  }
+
+  .discover-banner {
+    margin: -16px -12px 16px;
+    padding: 24px 16px;
+  }
+  
+  .discover-banner h2 {
+    font-size: 20px;
+  }
+
+  .discover-banner p {
+    font-size: 13px;
+  }
+
+  .discover-banner-btn {
+    padding: 10px 24px;
+    font-size: 14px;
+  }
+  
+  .discover-cta-section {
+    margin: 24px -12px -32px;
+    padding: 32px 16px;
+  }
+  
+  .discover-cta-section h2 {
+    font-size: 20px;
+  }
+
+  .discover-cta-section p {
+    font-size: 13px;
+  }
+
+  .discover-cta-btn {
+    padding: 12px 28px;
+    font-size: 14px;
+  }
+}
+
+/* Extra Small Mobile */
+@media (max-width: 360px) {
+  .discover-page {
+    padding: 12px 8px 24px;
+  }
+
+  .discover-header {
+    margin: -12px -8px 12px;
+    padding: 16px 8px;
+  }
+
+  .discover-header h1 {
+    font-size: 20px;
+  }
+
+  .filters-sidebar {
+    padding: 12px 10px 16px;
+  }
+
+  .discover-results {
+    padding: 12px 14px 16px;
+  }
+
+  .results-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .view-switch,
+  .sort-select {
+    width: 100%;
   }
 }

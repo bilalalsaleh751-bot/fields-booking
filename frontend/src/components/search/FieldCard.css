@@ -88,3 +88,81 @@
 .book-now-btn:hover {
   background: #1e4dcc;
 }
+
+/* ========================================
+   RESPONSIVE DESIGN
+======================================== */
+
+@media (max-width: 768px) {
+  .field-card {
+    border-radius: 12px;
+  }
+
+  .field-img {
+    height: 160px;
+  }
+
+  .field-info {
+    padding: 12px;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .field-info-left {
+    width: 100%;
+  }
+
+  .field-name {
+    font-size: 18px;
+  }
+
+  .field-city {
+    font-size: 13px;
+  }
+
+  .field-price {
+    font-size: 15px;
+  }
+
+  .field-info-right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .book-now-btn {
+    width: 100%;
+    text-align: center;
+    padding: 10px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .field-img {
+    height: 140px;
+  }
+
+  .field-info {
+    padding: 10px;
+  }
+
+  .field-name {
+    font-size: 16px;
+  }
+
+  .field-city {
+    font-size: 12px;
+  }
+
+  .field-price {
+    font-size: 14px;
+    margin-top: 4px;
+  }
+
+  .field-rating {
+    font-size: 13px;
+  }
+
+  .field-rating-count {
+    font-size: 12px;
+  }
+}

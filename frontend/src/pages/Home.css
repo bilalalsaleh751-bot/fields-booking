@@ -504,30 +504,71 @@
 /* ========================================
    RESPONSIVE
 ======================================== */
+
+/* Tablet and below */
+@media (max-width: 1024px) {
+  .container {
+    padding: 0 20px;
+  }
+
+  .section {
+    padding: 60px 0;
+  }
+
+  .hero-content {
+    padding: 30px 20px;
+  }
+
+  .steps-grid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 24px;
+  }
+
+  .features-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+  }
+
+  .cities-grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+}
+
+/* Mobile and Tablet */
 @media (max-width: 768px) {
+  .container {
+    padding: 0 16px;
+  }
+
   .hero {
     min-height: 500px;
   }
 
   .hero-title {
     font-size: 32px;
+    line-height: 1.2;
   }
 
   .hero-subtitle {
     font-size: 16px;
+    margin-bottom: 32px;
   }
 
   .search-box {
     flex-direction: column;
     padding: 20px;
+    gap: 16px;
   }
 
   .search-field {
     width: 100%;
+    min-width: unset;
   }
 
   .search-btn {
     width: 100%;
+    align-self: stretch;
+    margin-top: 4px;
   }
 
   .section {
@@ -541,16 +582,75 @@
   .section-subtitle {
     font-size: 15px;
     margin-bottom: 32px;
+    padding: 0 16px;
+  }
+
+  .categories-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 16px;
+  }
+
+  .category-card {
+    padding: 24px 16px;
+  }
+
+  .category-icon {
+    font-size: 40px;
+  }
+
+  .steps-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .step-card {
+    padding: 32px 24px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  .stat-card {
+    padding: 20px;
+  }
+
+  .stat-value {
+    font-size: 36px;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .feature-card {
+    padding: 24px 20px;
+  }
+
+  .cities-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .city-card {
+    height: 200px;
   }
 
   .cta-card {
-    padding: 32px 28px;
+    padding: 32px 24px;
     flex-direction: column;
     text-align: center;
+    gap: 24px;
   }
 
   .cta-title {
     font-size: 24px;
+  }
+
+  .cta-subtitle {
+    font-size: 15px;
   }
 
   .cta-btn {
@@ -559,9 +659,38 @@
   }
 }
 
+/* Small Mobile */
 @media (max-width: 480px) {
+  .hero {
+    min-height: 450px;
+  }
+
   .hero-title {
     font-size: 26px;
+    margin-bottom: 12px;
+  }
+
+  .hero-subtitle {
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+
+  .search-box {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .section {
+    padding: 40px 0;
+  }
+
+  .section-title {
+    font-size: 24px;
+  }
+
+  .section-subtitle {
+    font-size: 14px;
+    margin-bottom: 24px;
   }
 
   .categories-grid {
@@ -577,11 +706,95 @@
     font-size: 32px;
   }
 
+  .category-name {
+    font-size: 13px;
+  }
+
   .step-card {
-    padding: 32px 20px;
+    padding: 28px 20px;
+  }
+
+  .step-icon {
+    font-size: 40px;
+    margin-bottom: 16px;
+  }
+
+  .step-title {
+    font-size: 18px;
+  }
+
+  .step-desc {
+    font-size: 14px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
 
   .stat-value {
     font-size: 32px;
+  }
+
+  .stat-label {
+    font-size: 13px;
+  }
+
+  .feature-card {
+    padding: 20px 16px;
+  }
+
+  .feature-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    margin-bottom: 16px;
+  }
+
+  .feature-title {
+    font-size: 16px;
+  }
+
+  .feature-desc {
+    font-size: 13px;
+  }
+
+  .city-card {
+    height: 180px;
+  }
+
+  .city-info h3 {
+    font-size: 20px;
+  }
+
+  .city-info p {
+    font-size: 13px;
+  }
+
+  .cta-card {
+    padding: 24px 20px;
+  }
+
+  .cta-title {
+    font-size: 22px;
+  }
+
+  .cta-subtitle {
+    font-size: 14px;
+  }
+}
+
+/* Extra Small Mobile */
+@media (max-width: 360px) {
+  .hero-title {
+    font-size: 22px;
+  }
+
+  .categories-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
   }
 }

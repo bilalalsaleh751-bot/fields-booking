@@ -354,3 +354,240 @@
   margin-bottom: 20px;
   font-size: 14px;
 }
+
+/* ===========================
+   RESPONSIVE DESIGN
+=========================== */
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .field-page {
+    padding: 24px 32px 50px;
+  }
+
+  .field-hero {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .field-hero-main {
+    height: 320px;
+  }
+
+  .field-hero-gallery {
+    flex-direction: row;
+    height: 120px;
+  }
+
+  .field-hero-thumb {
+    flex: 1;
+  }
+
+  .field-section-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+}
+
+/* Mobile and Tablet */
+@media (max-width: 768px) {
+  .field-page {
+    padding: 20px 16px 40px;
+  }
+
+  .field-top-bar {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .field-back-btn {
+    font-size: 13px;
+    padding: 7px 14px;
+  }
+
+  .field-details-book-btn {
+    font-size: 13px;
+    padding: 9px 18px;
+  }
+
+  .field-hero {
+    grid-template-columns: 1fr;
+    margin-bottom: 20px;
+  }
+
+  .field-hero-main {
+    height: 280px;
+    border-radius: 14px;
+  }
+
+  .field-hero-overlay h1 {
+    font-size: 24px;
+  }
+
+  .field-hero-overlay p {
+    font-size: 13px;
+  }
+
+  .field-hero-gallery {
+    display: none; /* Hide gallery on mobile to save space */
+  }
+
+  .field-gallery-full {
+    padding: 16px 20px;
+    border-radius: 14px;
+  }
+
+  .field-gallery-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+
+  .field-section {
+    margin-bottom: 24px;
+  }
+
+  .field-section h2,
+  .field-section h3 {
+    font-size: 18px;
+  }
+
+  .field-description {
+    font-size: 14px;
+  }
+
+  .field-section-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .field-tags-row {
+    gap: 8px;
+  }
+
+  .field-tag {
+    font-size: 12px;
+    padding: 5px 10px;
+  }
+
+  .field-owner-card {
+    padding: 14px;
+  }
+
+  .field-owner-name {
+    font-size: 16px;
+  }
+
+  .field-review-card {
+    padding: 12px;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+  .field-page {
+    padding: 16px 12px 32px;
+  }
+
+  .field-top-bar {
+    margin-bottom: 14px;
+  }
+
+  .field-hero-main {
+    height: 240px;
+    border-radius: 12px;
+  }
+
+  .field-hero-overlay {
+    padding: 14px;
+  }
+
+  .field-hero-overlay h1 {
+    font-size: 20px;
+  }
+
+  .field-hero-overlay p {
+    font-size: 12px;
+  }
+
+  .field-rating-score {
+    font-size: 14px;
+  }
+
+  .field-rating-count {
+    font-size: 12px;
+  }
+
+  .field-gallery-full {
+    padding: 14px 16px;
+    border-radius: 12px;
+  }
+
+  .field-gallery-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .field-section {
+    margin-bottom: 20px;
+  }
+
+  .field-section h2,
+  .field-section h3 {
+    font-size: 16px;
+  }
+
+  .field-description {
+    font-size: 13px;
+  }
+
+  .field-tags-row {
+    gap: 6px;
+  }
+
+  .field-tag {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+
+  .field-owner-card {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .field-owner-name {
+    font-size: 15px;
+  }
+
+  .field-review-card {
+    padding: 10px;
+    border-radius: 10px;
+  }
+
+  .field-review-form {
+    padding: 12px;
+  }
+
+  .field-review-submit {
+    width: 100%;
+    padding: 10px;
+  }
+}
+
+/* Extra Small Mobile */
+@media (max-width: 360px) {
+  .field-page {
+    padding: 12px 8px 24px;
+  }
+
+  .field-hero-main {
+    height: 200px;
+  }
+
+  .field-hero-overlay h1 {
+    font-size: 18px;
+  }
+
+  .field-gallery-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,10 +1,11 @@
 // src/dashboard/components/Sidebar.jsx
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 
-function Sidebar() {
+function Sidebar({ isOpen, onClose }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { auth, logout } = useAuth();
   const [ownerName, setOwnerName] = useState("");
 
@@ -55,8 +56,43 @@ function Sidebar() {
     navigate("/owner/login", { replace: true });
   }, [logout, navigate]);
 
+  // Close sidebar when clicking outside on mobile
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (isOpen && !e.target.closest('.dashboard-sidebar') && !e.target.closest('.dashboard-mobile-menu-toggle')) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.body.style.overflow = '';
+    };
+  }, [isOpen, onClose]);
+
+  // Close sidebar when route changes on mobile
+  useEffect(() => {
+    if (isOpen) {
+      onClose();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
   return (
-    <aside className="dashboard-sidebar">
+    <>
+      {/* Overlay for mobile */}
+      <div 
+        className={`dashboard-sidebar-overlay ${isOpen ? 'active' : ''}`}
+        onClick={onClose}
+      />
+      <aside className={`dashboard-sidebar ${isOpen ? 'mobile-open' : ''}`}>
       <div className="dashboard-logo">
         <div className="dashboard-logo-badge">SL</div>
         <div className="dashboard-logo-text">
@@ -115,6 +151,7 @@ function Sidebar() {
         <span>Logout</span>
       </button>
     </aside>
+    </>
   );
 }
 

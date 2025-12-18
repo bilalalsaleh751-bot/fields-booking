@@ -1,10 +1,11 @@
 // src/admin/components/AdminSidebar.jsx
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 
-function AdminSidebar() {
+function AdminSidebar({ isOpen, onClose }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { auth } = useAuth();
   const [adminName, setAdminName] = useState("");
   const [adminRole, setAdminRole] = useState("");
@@ -60,15 +61,51 @@ function AdminSidebar() {
     support: "Support",
   };
 
+  // Close sidebar when clicking outside on mobile
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (isOpen && !e.target.closest('.admin-sidebar') && !e.target.closest('.admin-mobile-menu-toggle')) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.body.style.overflow = '';
+    };
+  }, [isOpen, onClose]);
+
+  // Close sidebar when route changes on mobile
+  useEffect(() => {
+    if (isOpen) {
+      onClose();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
   return (
-    <aside className="admin-sidebar">
-      <div className="admin-logo">
-        <div className="admin-logo-badge">SL</div>
-        <div className="admin-logo-text">
-          <span className="admin-logo-title">Sport Lebanon</span>
-          <span className="admin-logo-subtitle">Admin Panel</span>
+    <>
+      {/* Overlay for mobile */}
+      <div 
+        className={`admin-sidebar-overlay ${isOpen ? 'active' : ''}`}
+        onClick={onClose}
+      />
+      
+      <aside className={`admin-sidebar ${isOpen ? 'mobile-open' : ''}`}>
+        <div className="admin-logo">
+          <div className="admin-logo-badge">SL</div>
+          <div className="admin-logo-text">
+            <span className="admin-logo-title">Sport Lebanon</span>
+            <span className="admin-logo-subtitle">Admin Panel</span>
+          </div>
         </div>
-      </div>
 
       <div className="admin-nav">
         <span className="admin-nav-section-title">Management</span>
@@ -102,6 +139,7 @@ function AdminSidebar() {
         <span>Logout</span>
       </button>
     </aside>
+    </>
   );
 }
 
