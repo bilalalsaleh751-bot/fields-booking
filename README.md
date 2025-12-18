@@ -1,4 +1,10 @@
-<img src="frontend/public/vite.svg" width="900" alt="Project Preview">
+<p align="center">
+  <img
+    src="frontend/public/vite.svg"
+    alt="Project Preview"
+    style="max-width: 900px; width: 100%; border-radius: 14px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); margin-top: 24px;"
+  />
+</p>
 
 
 # Fields Booking Platform
