@@ -1,17 +1,4 @@
-<p align="center">
-  <img
-    src="frontend/public/sport.avif"
-    alt="Fields Booking Platform"
-    style="
-      width: 100%;
-      max-width: 1200px;
-      height: auto;
-      border-radius: 20px;
-      margin-top: 32px;
-      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.25);
-    "
-  />
-</p>
+
 
 
 # Fields Booking Platform
