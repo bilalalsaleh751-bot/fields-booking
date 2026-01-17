@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 function OwnerLogin() {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -18,7 +21,7 @@ function OwnerLogin() {
     setError("");
 
     try {
-      const response = await fetch("http://localhost:5000/api/owner/login", {
+      const response = await fetch(`${API_BASE}/api/owner/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

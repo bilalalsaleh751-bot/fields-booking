@@ -5,6 +5,9 @@ import { useLocation } from "react-router-dom";
 import DashboardHeader from "../components/DashboardHeader";
 import "../dashboard.css";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 function OwnerBookings() {
   const location = useLocation();
   const abortControllerRef = useRef(null);
@@ -55,7 +58,7 @@ function OwnerBookings() {
       const queryParams = new URLSearchParams({ ownerId });
 
       const res = await fetch(
-        `http://localhost:5000/api/owner/bookings?${queryParams}`,
+        `${API_BASE}/api/owner/bookings?${queryParams}`,
         { 
           cache: "no-store",
           signal: abortControllerRef.current.signal
@@ -206,7 +209,7 @@ function OwnerBookings() {
     setActionLoading(true);
     try {
       const res = await fetch(
-        `http://localhost:5000/api/owner/bookings/${bookingId}/status`,
+        `${API_BASE}/api/owner/bookings/${bookingId}/status`,
         {
           method: "PUT",
           headers: {

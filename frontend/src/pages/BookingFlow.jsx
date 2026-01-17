@@ -3,6 +3,9 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
 import "./BookingFlow.css";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 // SIMPLIFIED STEPS - Skip sport/area/court when coming from field page
 const STEPS_FULL = [
   { id: 1, key: "sport", label: "Sport" },
@@ -203,7 +206,7 @@ export default function BookingFlow() {
       try {
         setLoadingField(true);
 
-        const res = await fetch(`http://localhost:5000/api/fields/${fieldId}`);
+        const res = await fetch(`${API_BASE}/api/fields/${fieldId}`);
         if (!res.ok) throw new Error("Failed to load field");
 
         const data = await res.json();
@@ -249,7 +252,7 @@ export default function BookingFlow() {
       // Include duration in request for smart filtering
       const durationParam = form.duration || "1";
       const res = await fetch(
-        `http://localhost:5000/api/fields/${fieldId}/availability?date=${form.date}&duration=${durationParam}`
+        `${API_BASE}/api/fields/${fieldId}/availability?date=${form.date}&duration=${durationParam}`
       );
 
       if (!res.ok) throw new Error("Failed to load availability");
@@ -442,7 +445,7 @@ export default function BookingFlow() {
         userId: isLoggedIn ? userId : undefined,
       };
 
-      const res = await fetch("http://localhost:5000/api/bookings", {
+      const res = await fetch(`${API_BASE}/api/bookings`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

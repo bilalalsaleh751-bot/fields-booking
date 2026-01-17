@@ -1,0 +1,35 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    ports:
+      - "5050:5050"
+    environment:
+      PORT: "5050"
+      HOST: "0.0.0.0"
+      MONGO_URI: "mongodb://mongo:27017/fields-booking"
+    volumes:
+      - ./backend/uploads:/app/uploads
+    depends_on:
+      - mongo
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: "http://127.0.0.1:5050"
+    depends_on:
+      - backend
+
+volumes:
+  mongo_data:

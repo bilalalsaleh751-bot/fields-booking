@@ -2,6 +2,9 @@ import { createContext, useContext, useState, useEffect } from "react";
 
 const AuthContext = createContext(null);
 
+// Use Vite env for API base, defaulting to localhost:5050
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
 // ============================================================
 // MULTI-SESSION AUTH SYSTEM
 // Allows users to be logged in as multiple roles simultaneously
@@ -134,7 +137,7 @@ export function AuthProvider({ children }) {
       }
 
       // Verify token with server
-      const res = await fetch(`http://localhost:5000/api/auth/me?expectedRole=${expectedRole || ""}`, {
+      const res = await fetch(`${API_BASE}/api/auth/me?expectedRole=${expectedRole || ""}`, {
         headers: { 
           Authorization: `Bearer ${token}`,
           "X-Expected-Role": expectedRole || "",

@@ -3,6 +3,9 @@ import { Link } from "react-router-dom";
 import Footer from "../components/layout/Footer";
 import "./FAQ.css";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 export default function FAQ() {
   const [faqs, setFaqs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -12,7 +15,7 @@ export default function FAQ() {
   useEffect(() => {
     const fetchFAQs = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/public/faqs");
+        const res = await fetch(`${API_BASE}/api/public/faqs`);
         if (res.ok) {
           const data = await res.json();
           setFaqs(data.faqs || []);

@@ -2,6 +2,9 @@ import "./../auth.css";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 function OwnerRegisterStep3() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -40,7 +43,7 @@ function OwnerRegisterStep3() {
 
       // إرسال الملفات إلى السيرفر
       const response = await fetch(
-        `http://localhost:5000/api/owner/register/upload/${ownerId}`,
+        `${API_BASE}/api/owner/register/upload/${ownerId}`,
         {
           method: "PUT",
           body: formData, // ملاحظة: لا نضع Content-Type هنا!

@@ -3,6 +3,35 @@ import { useNavigate, Link } from "react-router-dom";
 import "./Home.css";
 import Footer from "../components/layout/Footer";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+const CITY_IMAGE_OVERRIDES = {
+  beirut: "https://images.unsplash.com/photo-1574629810360-7efbbe195018",
+  tripoli: "https://images.unsplash.com/photo-1518091043644-c1d4457512c6",
+  sidon: "https://images.unsplash.com/photo-1522778119026-d647f0596c20",
+  saida: "https://images.unsplash.com/photo-1522778119026-d647f0596c20",
+};
+
+const resolveImageUrl = (url) => {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  const cleaned = url.startsWith("/") ? url.slice(1) : url;
+  return `${API_BASE}/${cleaned}`;
+};
+
+const normalizeCityItem = (item) => {
+  if (!item) return item;
+  const key = String(item.name || "").trim().toLowerCase();
+  if (CITY_IMAGE_OVERRIDES[key]) {
+    return { ...item, imageUrl: CITY_IMAGE_OVERRIDES[key] };
+  }
+  if (item.imageUrl && !item.imageUrl.startsWith("http")) {
+    return { ...item, imageUrl: resolveImageUrl(item.imageUrl) };
+  }
+  return item;
+};
+
+
 export default function Home() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -19,7 +48,7 @@ export default function Home() {
   useEffect(() => {
     const fetchHomepage = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/public/homepage");
+        const res = await fetch(`${API_BASE}/api/public/homepage`);
         if (res.ok) {
           const data = await res.json();
           setContent(data.content);
@@ -113,6 +142,9 @@ export default function Home() {
     { name: "Swimming", icon: "🏊", slug: "swimming" },
   ];
 
+  const normalizedCities = (citiesSection.items || []).map(normalizeCityItem);
+  const heroBgImage = resolveImageUrl(hero.backgroundImage);
+
   if (loading) {
     return (
       <div className="home-loading">
@@ -125,7 +157,7 @@ export default function Home() {
   return (
     <div className="home-page">
       {/* ===================== HERO SECTION ===================== */}
-      <section className="hero" style={{ backgroundImage: `url(${hero.backgroundImage})` }}>
+      <section className="hero" style={{ backgroundImage: `url(${heroBgImage})` }}>
         <div className="hero-overlay"></div>
         <div className="hero-content">
           <h1 className="hero-title">{hero.title}</h1>
@@ -266,13 +298,13 @@ export default function Home() {
           <p className="section-subtitle">{citiesSection.subtitle}</p>
           
           <div className="cities-grid">
-            {citiesSection.items?.map((c, i) => (
+            {normalizedCities.map((c, i) => (
               <Link 
                 to={`/discover?city=${c.name}`} 
                 key={i} 
                 className="city-card"
               >
-                <img src={c.imageUrl} alt={c.name} loading="lazy" />
+                <img src={resolveImageUrl(c.imageUrl)} alt={c.name} loading="lazy" />
                 <div className="city-overlay"></div>
                 <div className="city-info">
                   <h3>{c.name}</h3>

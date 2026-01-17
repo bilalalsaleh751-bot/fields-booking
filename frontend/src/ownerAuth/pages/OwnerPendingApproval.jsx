@@ -2,6 +2,9 @@ import "./../auth.css";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 function OwnerPendingApproval() {
   const navigate = useNavigate();
   const [checking, setChecking] = useState(false);
@@ -21,7 +24,7 @@ function OwnerPendingApproval() {
       }
 
       const response = await fetch(
-        `http://localhost:5000/api/owner/status/${ownerId}`
+        `${API_BASE}/api/owner/status/${ownerId}`
       );
 
       const data = await response.json();

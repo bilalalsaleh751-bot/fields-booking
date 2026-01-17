@@ -3,7 +3,10 @@ import { memo, useState, useCallback } from "react";
 import "./FieldCard.css";
 import { Link } from "react-router-dom";
 
-const API_URL = "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
+const API_URL = `${API_BASE}`;
 const PLACEHOLDER = "/images/placeholder-field.jpg";
 
 // Helper to get proper image URL (stable, no dynamic values)

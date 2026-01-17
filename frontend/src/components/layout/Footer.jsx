@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import "./Footer.css";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 const Footer = () => {
   const [content, setContent] = useState(null);
   const [platformName, setPlatformName] = useState("Sport Lebanon");
@@ -10,7 +13,7 @@ const Footer = () => {
   useEffect(() => {
     const fetchFooter = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/public/footer");
+        const res = await fetch(`${API_BASE}/api/public/footer`);
         if (res.ok) {
           const data = await res.json();
           setContent(data.content);

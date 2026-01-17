@@ -10,6 +10,9 @@ import {
 } from "../constants/filterOptions";
 import "./Discover.css";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 // Leaflet CSS (loaded once)
 const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
 const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
@@ -154,7 +157,7 @@ export default function Discover() {
     const fetchDiscoverData = async () => {
       try {
         setCmsLoading(true);
-        const res = await fetch("http://localhost:5000/api/public/discover");
+        const res = await fetch(`${API_BASE}/api/public/discover`);
         if (res.ok) {
           const data = await res.json();
           setCmsContent(data.content);
@@ -184,8 +187,8 @@ export default function Discover() {
         setError("");
 
         const url = searchParamsString
-          ? `http://localhost:5000/api/fields/search?${searchParamsString}`
-          : `http://localhost:5000/api/fields/search`;
+          ? `${API_BASE}/api/fields/search?${searchParamsString}`
+          : `${API_BASE}/api/fields/search`;
 
         const res = await fetch(url);
         
@@ -237,7 +240,7 @@ export default function Discover() {
         const availabilityPromises = fieldsToCheck.map(async (field) => {
           try {
             const res = await fetch(
-              `http://localhost:5000/api/fields/${field._id}/availability?date=${date}`
+              `${API_BASE}/api/fields/${field._id}/availability?date=${date}`
             );
             if (res.ok) {
               const data = await res.json();
@@ -723,9 +726,11 @@ export default function Discover() {
         <div 
           className="discover-banner"
           style={{
-            background: cmsContent.banner.backgroundImage 
-              ? `url(${cmsContent.banner.backgroundImage.startsWith('http') ? cmsContent.banner.backgroundImage : `http://localhost:5000/${cmsContent.banner.backgroundImage}`}) center/cover`
-              : cmsContent.banner.backgroundColor || '#3b82f6',
+            background: cmsContent.banner.backgroundImage
+              ? `url(${cmsContent.banner.backgroundImage.startsWith("http")
+                ? cmsContent.banner.backgroundImage
+                : `${API_BASE}/${cmsContent.banner.backgroundImage}`}) center/cover`
+              : cmsContent.banner.backgroundColor || "#3b82f6",
           }}
         >
           <div className="discover-banner-content">
@@ -744,9 +749,11 @@ export default function Discover() {
       <div 
         className="discover-header"
         style={headerBgImage ? {
-          backgroundImage: `url(${headerBgImage.startsWith('http') ? headerBgImage : `http://localhost:5000/${headerBgImage}`})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
+          backgroundImage: `url(${headerBgImage.startsWith("http")
+            ? headerBgImage
+            : `${API_BASE}/${headerBgImage}`})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
         } : {}}
       >
         <h1>{headerTitle}</h1>

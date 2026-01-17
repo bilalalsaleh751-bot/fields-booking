@@ -1,6 +1,9 @@
 // src/dashboard/components/DashboardHeader.jsx
 import { useState, useEffect, useCallback, useRef } from "react";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 function DashboardHeader({ ownerName, onAddField }) {
   const [ownerId, setOwnerId] = useState("");
   const [notifications, setNotifications] = useState([]);
@@ -25,7 +28,7 @@ function DashboardHeader({ ownerName, onAddField }) {
     if (!ownerId) return;
     try {
       const res = await fetch(
-        `http://localhost:5000/api/owner/notifications?ownerId=${ownerId}&limit=10`,
+        `${API_BASE}/api/owner/notifications?ownerId=${ownerId}&limit=10`,
         { cache: "no-store" }
       );
       const data = await res.json();
@@ -58,7 +61,7 @@ function DashboardHeader({ ownerName, onAddField }) {
 
   const handleMarkAllRead = async () => {
     try {
-      await fetch("http://localhost:5000/api/owner/notifications/read-all", {
+      await fetch(`${API_BASE}/api/owner/notifications/read-all`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ownerId }),

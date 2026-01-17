@@ -2,6 +2,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 function AdminActivity() {
   const navigate = useNavigate();
   const [logs, setLogs] = useState([]);
@@ -19,7 +22,7 @@ function AdminActivity() {
       params.set("page", page.toString());
       params.set("limit", "30");
 
-      const res = await fetch(`http://localhost:5000/api/admin/activity?${params}`, {
+      const res = await fetch(`${API_BASE}/api/admin/activity?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

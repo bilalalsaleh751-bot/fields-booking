@@ -2,6 +2,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 function AdminSettings() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("general");
@@ -26,14 +29,14 @@ function AdminSettings() {
       const token = localStorage.getItem("adminToken");
 
       if (activeTab === "general" || activeTab === "gateway") {
-        const res = await fetch("http://localhost:5000/api/admin/settings", {
+        const res = await fetch(`${API_BASE}/api/admin/settings`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch settings");
         const data = await res.json();
         setSettings(data.settings || {});
       } else if (activeTab === "cities") {
-        const res = await fetch("http://localhost:5000/api/admin/settings/cities", {
+        const res = await fetch(`${API_BASE}/api/admin/settings/cities`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch cities");
@@ -55,7 +58,7 @@ function AdminSettings() {
     setSaving(true);
     try {
       const token = localStorage.getItem("adminToken");
-      const res = await fetch("http://localhost:5000/api/admin/settings", {
+      const res = await fetch(`${API_BASE}/api/admin/settings`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -94,7 +97,7 @@ function AdminSettings() {
 
     try {
       const token = localStorage.getItem("adminToken");
-      const res = await fetch("http://localhost:5000/api/admin/settings/cities", {
+      const res = await fetch(`${API_BASE}/api/admin/settings/cities`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -118,7 +121,7 @@ function AdminSettings() {
 
     try {
       const token = localStorage.getItem("adminToken");
-      const res = await fetch(`http://localhost:5000/api/admin/settings/cities/${cityId}`, {
+      const res = await fetch(`${API_BASE}/api/admin/settings/cities/${cityId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });

@@ -2,6 +2,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 function AdminAccounts() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("admins");
@@ -22,7 +25,7 @@ function AdminAccounts() {
     setLoading(true);
     try {
       const token = localStorage.getItem("adminToken");
-      const res = await fetch("http://localhost:5000/api/admin/admins", {
+      const res = await fetch(`${API_BASE}/api/admin/admins`, {
         headers: { Authorization: `Bearer ${token}` },
         cache: "no-store",
       });
@@ -58,7 +61,7 @@ function AdminAccounts() {
     setActionLoading(true);
     try {
       const token = localStorage.getItem("adminToken");
-      const res = await fetch("http://localhost:5000/api/admin/admins", {
+      const res = await fetch(`${API_BASE}/api/admin/admins`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -90,7 +93,7 @@ function AdminAccounts() {
     setActionLoading(true);
     try {
       const token = localStorage.getItem("adminToken");
-      const res = await fetch("http://localhost:5000/api/admin/accounts/user", {
+      const res = await fetch(`${API_BASE}/api/admin/accounts/user`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -121,7 +124,7 @@ function AdminAccounts() {
     setActionLoading(true);
     try {
       const token = localStorage.getItem("adminToken");
-      const res = await fetch("http://localhost:5000/api/admin/accounts/owner", {
+      const res = await fetch(`${API_BASE}/api/admin/accounts/owner`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -152,7 +155,7 @@ function AdminAccounts() {
     setActionLoading(true);
     try {
       const token = localStorage.getItem("adminToken");
-      const res = await fetch("http://localhost:5000/api/admin/account/self", {
+      const res = await fetch(`${API_BASE}/api/admin/account/self`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -182,7 +185,7 @@ function AdminAccounts() {
   const handleToggleStatus = async (admin, isActive) => {
     try {
       const token = localStorage.getItem("adminToken");
-      const res = await fetch(`http://localhost:5000/api/admin/admins/${admin._id}/status`, {
+      const res = await fetch(`${API_BASE}/api/admin/admins/${admin._id}/status`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -204,7 +207,7 @@ function AdminAccounts() {
   const handleRoleChange = async (admin, newRole) => {
     try {
       const token = localStorage.getItem("adminToken");
-      const res = await fetch(`http://localhost:5000/api/admin/admins/${admin._id}/role`, {
+      const res = await fetch(`${API_BASE}/api/admin/admins/${admin._id}/role`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -232,7 +235,7 @@ function AdminAccounts() {
     setActionLoading(true);
     try {
       const token = localStorage.getItem("adminToken");
-      const res = await fetch(`http://localhost:5000/api/admin/admins/${selectedItem._id}/reset-password`, {
+      const res = await fetch(`${API_BASE}/api/admin/admins/${selectedItem._id}/reset-password`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,

@@ -3,6 +3,8 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import "./UnifiedLogin.css";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
 export default function UnifiedLogin() {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -18,7 +20,7 @@ export default function UnifiedLogin() {
 
     try {
       // Try unified login endpoint
-      const res = await fetch("http://localhost:5000/api/auth/login", {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

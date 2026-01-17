@@ -2,6 +2,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 function AdminFinancial() {
   const navigate = useNavigate();
   const [overview, setOverview] = useState(null);
@@ -26,10 +29,10 @@ function AdminFinancial() {
       const token = localStorage.getItem("adminToken");
 
       const [overviewRes, transactionsRes] = await Promise.all([
-        fetch("http://localhost:5000/api/admin/financial/overview", {
+        fetch(`${API_BASE}/api/admin/financial/overview`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch(`http://localhost:5000/api/admin/financial/transactions?page=${page}&limit=10`, {
+        fetch(`${API_BASE}/api/admin/financial/transactions?page=${page}&limit=10`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -70,7 +73,7 @@ function AdminFinancial() {
     setSaving(true);
     try {
       const token = localStorage.getItem("adminToken");
-      const res = await fetch("http://localhost:5000/api/admin/financial/commission", {
+      const res = await fetch(`${API_BASE}/api/admin/financial/commission`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,

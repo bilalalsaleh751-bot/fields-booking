@@ -2,6 +2,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 function AdminUsers() {
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
@@ -26,7 +29,7 @@ function AdminUsers() {
       if (filters.role) params.append("role", filters.role);
       if (filters.search) params.append("search", filters.search);
 
-      const res = await fetch(`http://localhost:5000/api/admin/users?${params}`, {
+      const res = await fetch(`${API_BASE}/api/admin/users?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
         cache: "no-store",
       });
@@ -56,7 +59,7 @@ function AdminUsers() {
     setActionLoading(userId);
     try {
       const token = localStorage.getItem("adminToken");
-      const res = await fetch(`http://localhost:5000/api/admin/users/${userId}/role`, {
+      const res = await fetch(`${API_BASE}/api/admin/users/${userId}/role`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -82,7 +85,7 @@ function AdminUsers() {
     try {
       const token = localStorage.getItem("adminToken");
       const action = activate ? "activate" : "deactivate";
-      const res = await fetch(`http://localhost:5000/api/admin/users/${userId}/${action}`, {
+      const res = await fetch(`${API_BASE}/api/admin/users/${userId}/${action}`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -105,7 +108,7 @@ function AdminUsers() {
     setActionLoading(showModal._id);
     try {
       const token = localStorage.getItem("adminToken");
-      const res = await fetch(`http://localhost:5000/api/admin/users/${showModal._id}/reset-password`, {
+      const res = await fetch(`${API_BASE}/api/admin/users/${showModal._id}/reset-password`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,

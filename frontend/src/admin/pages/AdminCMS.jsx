@@ -3,6 +3,9 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import ImageUpload from "../components/ImageUpload";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 function AdminCMS() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("homepage");
@@ -30,35 +33,35 @@ function AdminCMS() {
       const token = localStorage.getItem("adminToken");
 
       if (activeTab === "homepage") {
-        const res = await fetch("http://localhost:5000/api/admin/cms/homepage", {
+        const res = await fetch(`${API_BASE}/api/admin/cms/homepage`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch homepage content");
         const result = await res.json();
         setHomepageContent(result.content);
       } else if (activeTab === "discover") {
-        const res = await fetch("http://localhost:5000/api/admin/cms/discover", {
+        const res = await fetch(`${API_BASE}/api/admin/cms/discover`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch discover content");
         const result = await res.json();
         setDiscoverContent(result.content);
       } else if (activeTab === "footer") {
-        const res = await fetch("http://localhost:5000/api/admin/cms/footer", {
+        const res = await fetch(`${API_BASE}/api/admin/cms/footer`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch footer content");
         const result = await res.json();
         setFooterContent(result.content);
       } else if (activeTab === "sport-types") {
-        const res = await fetch("http://localhost:5000/api/admin/cms/sport-types", {
+        const res = await fetch(`${API_BASE}/api/admin/cms/sport-types`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch sport types");
         const result = await res.json();
         setData(result.sportTypes || []);
       } else {
-        const res = await fetch(`http://localhost:5000/api/admin/cms/${activeTab}`, {
+        const res = await fetch(`${API_BASE}/api/admin/cms/${activeTab}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -89,7 +92,7 @@ function AdminCMS() {
     setSaving(true);
     try {
       const token = localStorage.getItem("adminToken");
-      const res = await fetch("http://localhost:5000/api/admin/cms/homepage", {
+      const res = await fetch(`${API_BASE}/api/admin/cms/homepage`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -114,7 +117,7 @@ function AdminCMS() {
     setSaving(true);
     try {
       const token = localStorage.getItem("adminToken");
-      const res = await fetch("http://localhost:5000/api/admin/cms/footer", {
+      const res = await fetch(`${API_BASE}/api/admin/cms/footer`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -139,7 +142,7 @@ function AdminCMS() {
     setSaving(true);
     try {
       const token = localStorage.getItem("adminToken");
-      const res = await fetch("http://localhost:5000/api/admin/cms/discover", {
+      const res = await fetch(`${API_BASE}/api/admin/cms/discover`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -189,7 +192,7 @@ function AdminCMS() {
       const token = localStorage.getItem("adminToken");
       let endpoint = activeTab === "promo-codes" ? "promo-codes" : activeTab;
       if (activeTab === "sport-types") endpoint = "sport-types";
-      const res = await fetch(`http://localhost:5000/api/admin/cms/${endpoint}/${id}`, {
+      const res = await fetch(`${API_BASE}/api/admin/cms/${endpoint}/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -210,8 +213,8 @@ function AdminCMS() {
       if (activeTab === "sport-types") endpoint = "sport-types";
       const method = editItem ? "PUT" : "POST";
       const url = editItem
-        ? `http://localhost:5000/api/admin/cms/${endpoint}/${editItem._id}`
-        : `http://localhost:5000/api/admin/cms/${endpoint}`;
+        ? `${API_BASE}/api/admin/cms/${endpoint}/${editItem._id}`
+        : `${API_BASE}/api/admin/cms/${endpoint}`;
 
       const res = await fetch(url, {
         method,

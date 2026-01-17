@@ -2,6 +2,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 function AdminDashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
@@ -13,7 +16,7 @@ function AdminDashboard() {
     try {
       const token = localStorage.getItem("adminToken");
       const res = await fetch(
-        "http://localhost:5000/api/admin/dashboard/overview",
+        `${API_BASE}/api/admin/dashboard/overview`,
         {
           headers: { Authorization: `Bearer ${token}` },
           cache: "no-store",

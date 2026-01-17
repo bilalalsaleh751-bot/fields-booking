@@ -5,6 +5,9 @@ import { useLocation } from "react-router-dom";
 import DashboardHeader from "../components/DashboardHeader";
 import "../dashboard.css";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 function OwnerSettings() {
   const location = useLocation();
 
@@ -36,7 +39,7 @@ function OwnerSettings() {
     try {
       setLoading(true);
       const res = await fetch(
-        `http://localhost:5000/api/owner/settings?ownerId=${ownerId}`,
+        `${API_BASE}/api/owner/settings?ownerId=${ownerId}`,
         { cache: "no-store" }
       );
       const data = await res.json();
@@ -71,7 +74,7 @@ function OwnerSettings() {
     setSaving(true);
     try {
       const res = await fetch(
-        `http://localhost:5000/api/owner/settings/profile/${ownerId}`,
+        `${API_BASE}/api/owner/settings/profile/${ownerId}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -114,7 +117,7 @@ function OwnerSettings() {
     setSaving(true);
     try {
       const res = await fetch(
-        `http://localhost:5000/api/owner/settings/password/${ownerId}`,
+        `${API_BASE}/api/owner/settings/password/${ownerId}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -150,7 +153,7 @@ function OwnerSettings() {
     setSaving(true);
     try {
       const res = await fetch(
-        `http://localhost:5000/api/owner/settings/business/${ownerId}`,
+        `${API_BASE}/api/owner/settings/business/${ownerId}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -182,7 +185,7 @@ function OwnerSettings() {
     setSaving(true);
     try {
       const res = await fetch(
-        `http://localhost:5000/api/owner/settings/notifications/${ownerId}`,
+        `${API_BASE}/api/owner/settings/notifications/${ownerId}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },

@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import "./AccountPages.css";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 export default function AccountProfile() {
   const [profile, setProfile] = useState({ name: "", email: "", phone: "" });
   const [loading, setLoading] = useState(true);
@@ -10,7 +13,7 @@ export default function AccountProfile() {
   const fetchProfile = async () => {
     try {
       const token = localStorage.getItem("userToken");
-      const res = await fetch("http://localhost:5000/api/users/profile", {
+      const res = await fetch(`${API_BASE}/api/users/profile`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -40,7 +43,7 @@ export default function AccountProfile() {
 
     try {
       const token = localStorage.getItem("userToken");
-      const res = await fetch("http://localhost:5000/api/users/profile", {
+      const res = await fetch(`${API_BASE}/api/users/profile`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,

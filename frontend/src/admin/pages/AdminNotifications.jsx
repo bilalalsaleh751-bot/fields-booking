@@ -2,6 +2,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 function AdminNotifications() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("broadcast");
@@ -27,14 +30,14 @@ function AdminNotifications() {
       const token = localStorage.getItem("adminToken");
 
       if (activeTab === "templates") {
-        const res = await fetch("http://localhost:5000/api/admin/notifications/templates", {
+        const res = await fetch(`${API_BASE}/api/admin/notifications/templates`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch templates");
         const data = await res.json();
         setTemplates(data.templates || []);
       } else if (activeTab === "logs") {
-        const res = await fetch("http://localhost:5000/api/admin/notifications/logs?limit=50", {
+        const res = await fetch(`${API_BASE}/api/admin/notifications/logs?limit=50`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch logs");
@@ -65,7 +68,7 @@ function AdminNotifications() {
     setSending(true);
     try {
       const token = localStorage.getItem("adminToken");
-      const res = await fetch("http://localhost:5000/api/admin/notifications/broadcast", {
+      const res = await fetch(`${API_BASE}/api/admin/notifications/broadcast`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

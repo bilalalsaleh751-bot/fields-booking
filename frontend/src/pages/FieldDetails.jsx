@@ -4,7 +4,10 @@ import { useParams, useSearchParams, useNavigate, Link } from "react-router-dom"
 import MapDisplay from "../components/MapDisplay";
 import "./FieldDetails.css";
 
-const API_URL = "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
+const API_URL = `${API_BASE}`;
 
 // Helper to get proper image URL
 const getImageUrl = (img) => {
@@ -34,7 +37,7 @@ export default function FieldDetails() {
         setLoading(true);
         setError("");
 
-        const res = await fetch(`http://localhost:5000/api/fields/${id}`);
+        const res = await fetch(`${API_BASE}/api/fields/${id}`);
         if (!res.ok) throw new Error("Failed to load field details");
 
         const data = await res.json();
@@ -64,7 +67,7 @@ export default function FieldDetails() {
       setReviewSuccess(false);
 
       const res = await fetch(
-        `http://localhost:5000/api/fields/${id}/reviews`,
+        `${API_BASE}/api/fields/${id}/reviews`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -84,7 +87,7 @@ export default function FieldDetails() {
 
       // Re-fetch field to get updated reviews list
       const updated = await fetch(
-        `http://localhost:5000/api/fields/${id}`
+        `${API_BASE}/api/fields/${id}`
       ).then((r) => r.json());
 
       setField(updated);

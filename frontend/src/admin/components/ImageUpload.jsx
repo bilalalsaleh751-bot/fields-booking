@@ -1,5 +1,8 @@
 import { useState, useRef } from "react";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 export default function ImageUpload({ value, onChange, label = "Image" }) {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState(value || "");
@@ -21,7 +24,7 @@ export default function ImageUpload({ value, onChange, label = "Image" }) {
       const formData = new FormData();
       formData.append("image", file);
 
-      const res = await fetch("http://localhost:5000/api/admin/cms/upload", {
+      const res = await fetch(`${API_BASE}/api/admin/cms/upload`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -30,7 +33,7 @@ export default function ImageUpload({ value, onChange, label = "Image" }) {
       if (res.ok) {
         const data = await res.json();
         onChange(data.fullUrl || data.imageUrl);
-        setPreview(data.fullUrl || `http://localhost:5000/${data.imageUrl}`);
+        setPreview(data.fullUrl || `${API_BASE}/${data.imageUrl}`);
       } else {
         console.error("Upload failed");
       }
@@ -51,7 +54,7 @@ export default function ImageUpload({ value, onChange, label = "Image" }) {
   const displayUrl = value?.startsWith("http") 
     ? value 
     : value 
-      ? `http://localhost:5000/${value}` 
+      ? `${API_BASE}/${value}` 
       : "";
 
   return (

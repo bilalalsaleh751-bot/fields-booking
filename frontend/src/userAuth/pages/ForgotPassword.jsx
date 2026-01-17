@@ -2,6 +2,9 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import "./UserAuth.css";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -13,7 +16,7 @@ export default function ForgotPassword() {
     setMessage(null);
 
     try {
-      const res = await fetch("http://localhost:5000/api/users/forgot-password", {
+      const res = await fetch(`${API_BASE}/api/users/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),

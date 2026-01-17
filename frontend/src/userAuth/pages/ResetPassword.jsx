@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import "./UserAuth.css";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 export default function ResetPassword() {
   const { token } = useParams();
   const navigate = useNavigate();
@@ -15,7 +18,7 @@ export default function ResetPassword() {
   useEffect(() => {
     const verifyToken = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/users/verify-reset-token/${token}`);
+        const res = await fetch(`${API_BASE}/api/users/verify-reset-token/${token}`);
         const data = await res.json();
         
         if (data.valid) {
@@ -49,7 +52,7 @@ export default function ResetPassword() {
     setMessage(null);
 
     try {
-      const res = await fetch("http://localhost:5000/api/users/reset-password", {
+      const res = await fetch(`${API_BASE}/api/users/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, newPassword: password }),

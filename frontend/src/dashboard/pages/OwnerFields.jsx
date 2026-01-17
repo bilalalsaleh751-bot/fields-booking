@@ -14,6 +14,9 @@ import {
 } from "../../constants/filterOptions";
 import "../dashboard.css";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 const inputStyle = {
   padding: "10px 12px",
   borderRadius: "8px",
@@ -154,7 +157,7 @@ function OwnerFields() {
     if (!ownerId) return;
     try {
       setLoadingFields(true);
-      const res = await fetch(`http://localhost:5000/api/fields?ownerId=${ownerId}`);
+      const res = await fetch(`${API_BASE}/api/fields?ownerId=${ownerId}`);
       const data = await res.json();
       if (res.ok) setFields(data.fields || []);
     } catch (err) {
@@ -269,14 +272,14 @@ function OwnerFields() {
       let res;
       if (mode === "create") {
         console.log("Creating new field...");
-        res = await fetch("http://localhost:5000/api/fields", {
+        res = await fetch(`${API_BASE}/api/fields`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ownerId, ...payload }),
         });
       } else {
         console.log("Updating field:", editingFieldId);
-        res = await fetch(`http://localhost:5000/api/fields/${editingFieldId}`, {
+        res = await fetch(`${API_BASE}/api/fields/${editingFieldId}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -318,7 +321,7 @@ function OwnerFields() {
       const endpoint = isActive ? "deactivate" : "activate";
       console.log(`Toggling field ${fieldId} to ${endpoint}`);
       
-      const res = await fetch(`http://localhost:5000/api/fields/${fieldId}/${endpoint}`, {
+      const res = await fetch(`${API_BASE}/api/fields/${fieldId}/${endpoint}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -361,7 +364,7 @@ function OwnerFields() {
       const formData = new FormData();
       imagePreviews.forEach((p) => formData.append("images", p.file));
       const token = getToken();
-      const res = await fetch(`http://localhost:5000/api/fields/${editingFieldId}/images`, {
+      const res = await fetch(`${API_BASE}/api/fields/${editingFieldId}/images`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -369,7 +372,7 @@ function OwnerFields() {
       if (res.ok) {
         clearPreviews();
         await fetchFields();
-        const fieldRes = await fetch(`http://localhost:5000/api/fields/${editingFieldId}`);
+        const fieldRes = await fetch(`${API_BASE}/api/fields/${editingFieldId}`);
         if (fieldRes.ok) {
           const updatedField = await fieldRes.json();
           setEditingFieldData(updatedField);
@@ -388,14 +391,14 @@ function OwnerFields() {
     try {
       setDeletingImage(imagePath);
       const token = getToken();
-      const res = await fetch(`http://localhost:5000/api/fields/${editingFieldId}/images`, {
+      const res = await fetch(`${API_BASE}/api/fields/${editingFieldId}/images`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ imagePath }),
       });
       if (res.ok) {
         await fetchFields();
-        const fieldRes = await fetch(`http://localhost:5000/api/fields/${editingFieldId}`);
+        const fieldRes = await fetch(`${API_BASE}/api/fields/${editingFieldId}`);
         if (fieldRes.ok) {
           const data = await fieldRes.json();
           setEditingFieldData(data);
@@ -413,14 +416,14 @@ function OwnerFields() {
   const handleBlockDate = async () => {
     if (!blockDate || !editingFieldId) return;
     const token = getToken();
-    await fetch(`http://localhost:5000/api/fields/${editingFieldId}/block-dates`, {
+    await fetch(`${API_BASE}/api/fields/${editingFieldId}/block-dates`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ dates: [blockDate] }),
     });
     setBlockDate("");
     await fetchFields();
-    const res = await fetch(`http://localhost:5000/api/fields/${editingFieldId}`);
+    const res = await fetch(`${API_BASE}/api/fields/${editingFieldId}`);
     if (res.ok) {
       const data = await res.json();
       setEditingFieldData(data);
@@ -429,13 +432,13 @@ function OwnerFields() {
 
   const handleUnblockDate = async (date) => {
     const token = getToken();
-    await fetch(`http://localhost:5000/api/fields/${editingFieldId}/unblock-dates`, {
+    await fetch(`${API_BASE}/api/fields/${editingFieldId}/unblock-dates`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ dates: [date] }),
     });
     await fetchFields();
-    const res = await fetch(`http://localhost:5000/api/fields/${editingFieldId}`);
+    const res = await fetch(`${API_BASE}/api/fields/${editingFieldId}`);
     if (res.ok) {
       const data = await res.json();
       setEditingFieldData(data);
@@ -481,7 +484,7 @@ function OwnerFields() {
                 {/* Thumbnail */}
                 <div style={{ width: 80, height: 60, borderRadius: 8, overflow: "hidden", background: "#e2e8f0", flexShrink: 0 }}>
                   {f.mainImage || f.images?.[0] ? (
-                    <img src={`http://localhost:5000/${f.mainImage || f.images[0]}`} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <img src={`${API_BASE}/${f.mainImage || f.images[0]}`} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   ) : (
                     <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8", fontSize: 10 }}>No image</div>
                   )}
@@ -934,7 +937,7 @@ function OwnerFields() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 10, marginTop: 8 }}>
                   {editingFieldData?.images?.map((img, i) => (
                     <div key={i} style={{ position: "relative", borderRadius: 8, overflow: "hidden", border: "1px solid #e2e8f0" }}>
-                      <img src={`http://localhost:5000/${img}`} alt="" style={{ width: "100%", height: 100, objectFit: "cover" }} />
+                      <img src={`${API_BASE}/${img}`} alt="" style={{ width: "100%", height: 100, objectFit: "cover" }} />
                       <button
                         type="button"
                         onClick={() => handleImageDelete(img)}
@@ -1033,7 +1036,7 @@ function OwnerFields() {
                     // Refresh field data to show updated blocked dates
                     await fetchFields();
                     const token = getToken();
-                    const fieldRes = await fetch(`http://localhost:5000/api/fields/${editingFieldId}`, {
+                    const fieldRes = await fetch(`${API_BASE}/api/fields/${editingFieldId}`, {
                       headers: { Authorization: `Bearer ${token}` },
                     });
                     if (fieldRes.ok) {

@@ -2,6 +2,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 function AdminOwners() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -30,7 +33,7 @@ function AdminOwners() {
       params.set("limit", "20");
 
       const res = await fetch(
-        `http://localhost:5000/api/admin/owners?${params}`,
+        `${API_BASE}/api/admin/owners?${params}`,
         {
           headers: { Authorization: `Bearer ${token}` },
           cache: "no-store",
@@ -65,7 +68,7 @@ function AdminOwners() {
     try {
       const token = localStorage.getItem("adminToken");
       const res = await fetch(
-        `http://localhost:5000/api/admin/owners/${ownerId}/${action}`,
+        `${API_BASE}/api/admin/owners/${ownerId}/${action}`,
         {
           method: "PUT",
           headers: {

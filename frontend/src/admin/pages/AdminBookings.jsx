@@ -2,6 +2,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 function AdminBookings() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -30,7 +33,7 @@ function AdminBookings() {
       params.set("limit", "20");
 
       const res = await fetch(
-        `http://localhost:5000/api/admin/bookings?${params}`,
+        `${API_BASE}/api/admin/bookings?${params}`,
         {
           headers: { Authorization: `Bearer ${token}` },
           cache: "no-store",
@@ -65,7 +68,7 @@ function AdminBookings() {
     try {
       const token = localStorage.getItem("adminToken");
       const res = await fetch(
-        `http://localhost:5000/api/admin/bookings/${bookingId}/status`,
+        `${API_BASE}/api/admin/bookings/${bookingId}/status`,
         {
           method: "PUT",
           headers: {
@@ -111,7 +114,7 @@ function AdminBookings() {
     try {
       const token = localStorage.getItem("adminToken");
       const res = await fetch(
-        `http://localhost:5000/api/admin/bookings/${bookingId}/dispute`,
+        `${API_BASE}/api/admin/bookings/${bookingId}/dispute`,
         {
           method: "PUT",
           headers: {

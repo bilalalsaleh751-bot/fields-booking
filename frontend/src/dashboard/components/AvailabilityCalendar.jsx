@@ -1,7 +1,10 @@
 // src/dashboard/components/AvailabilityCalendar.jsx
 import { useState, useEffect, useCallback } from "react";
 
-const API_URL = "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
+const API_URL = `${API_BASE}`;
 
 // Generate time slots based on opening hours
 const generateTimeSlots = (openHour = 8, closeHour = 23) => {

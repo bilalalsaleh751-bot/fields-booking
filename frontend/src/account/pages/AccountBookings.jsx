@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import "./AccountPages.css";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 // Status labels with Arabic translations
 const STATUS_LABELS = {
   pending: { en: "Pending", ar: "قيد الانتظار", color: "#f59e0b" },
@@ -30,7 +33,7 @@ export default function AccountBookings() {
     try {
       const token = localStorage.getItem("userToken");
       const res = await fetch(
-        `http://localhost:5000/api/users/bookings?type=${activeTab}`,
+        `${API_BASE}/api/users/bookings?type=${activeTab}`,
         { 
           headers: { Authorization: `Bearer ${token}` },
           cache: "no-store" // Prevent caching
@@ -84,7 +87,7 @@ export default function AccountBookings() {
     try {
       const token = localStorage.getItem("userToken");
       const res = await fetch(
-        `http://localhost:5000/api/users/bookings/${bookingId}/cancel`,
+        `${API_BASE}/api/users/bookings/${bookingId}/cancel`,
         {
           method: "PUT",
           headers: { Authorization: `Bearer ${token}` },
@@ -120,7 +123,7 @@ export default function AccountBookings() {
     try {
       const token = localStorage.getItem("userToken");
       const res = await fetch(
-        `http://localhost:5000/api/users/bookings/${reviewModal._id}/review`,
+        `${API_BASE}/api/users/bookings/${reviewModal._id}/review`,
         {
           method: "POST",
           headers: {
@@ -152,7 +155,7 @@ export default function AccountBookings() {
     try {
       const token = localStorage.getItem("userToken");
       const res = await fetch(
-        `http://localhost:5000/api/users/bookings/${bookingId}/receipt`,
+        `${API_BASE}/api/users/bookings/${bookingId}/receipt`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -298,7 +301,7 @@ export default function AccountBookings() {
               <div className="booking-image">
                 {booking.field?.mainImage || booking.field?.images?.[0] ? (
                   <img
-                    src={`http://localhost:5000/${booking.field.mainImage || booking.field.images[0]}`}
+                    src={`${API_BASE}/${booking.field.mainImage || booking.field.images[0]}`}
                     alt={booking.field?.name}
                   />
                 ) : (

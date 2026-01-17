@@ -16,39 +16,37 @@ import authRoutes from "./routes/authRoutes.js";
 dotenv.config();
 connectDB();
 
-// Ensure uploads folder exists
+// التأكد من وجود مجلد الرفع
 if (!fs.existsSync("uploads")) {
   fs.mkdirSync("uploads", { recursive: true });
   console.log("📁 Created uploads folder");
 }
 
 const app = express();
-app.use(cors());
+
+/** * الحل الجذري لمشكلة Windows و CORS 
+ * قمنا بإضافة 127.0.0.1 لأن ويندوز أحياناً لا يتعرف على localhost بشكل صحيح
+ */
+app.use(cors({
+  origin: ["http://localhost:5173", "http://127.0.0.1:5173"], 
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true 
+}));
+
 app.use(express.json());
 
 // Serve static files from uploads directory
 app.use("/uploads", express.static("uploads"));
 
-// FIELD ROUTES
+// ROUTES
 app.use("/api/fields", fieldRoutes);
 app.use("/api/fields", availabilityRoutes);
-
-// BOOKING ROUTES
 app.use("/api/bookings", bookingRoutes);
-
-// USER ROUTES
 app.use("/api/users", userRoutes);
-
-// OWNER ROUTES
 app.use("/api/owner", ownerRoutes);
-
-// ADMIN ROUTES
 app.use("/api/admin", adminRoutes);
-
-// PUBLIC CMS ROUTES (for frontend)
 app.use("/api/public", publicRoutes);
-
-// UNIFIED AUTH ROUTES (single login for all roles)
 app.use("/api/auth", authRoutes);
 
 app.get("/", (req, res) => {

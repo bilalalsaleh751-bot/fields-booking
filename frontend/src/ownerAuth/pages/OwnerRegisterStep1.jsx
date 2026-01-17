@@ -2,6 +2,9 @@ import "./../auth.css";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 function OwnerRegisterStep1() {
   const navigate = useNavigate();
 
@@ -27,7 +30,7 @@ function OwnerRegisterStep1() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5000/api/owner/register", {
+      const response = await fetch(`${API_BASE}/api/owner/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

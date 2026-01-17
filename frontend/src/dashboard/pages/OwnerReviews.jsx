@@ -4,6 +4,9 @@ import { useLocation } from "react-router-dom";
 import DashboardHeader from "../components/DashboardHeader";
 import "../dashboard.css";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 function OwnerReviews() {
   const location = useLocation();
   
@@ -28,7 +31,7 @@ function OwnerReviews() {
     try {
       setLoading(true);
       const res = await fetch(
-        `http://localhost:5000/api/owner/reviews?ownerId=${ownerId}`
+        `${API_BASE}/api/owner/reviews?ownerId=${ownerId}`
       );
       const data = await res.json();
       if (res.ok) setReviews(data.reviews || []);
@@ -54,7 +57,7 @@ function OwnerReviews() {
 
     try {
       const token = getToken();
-      const res = await fetch("http://localhost:5000/api/owner/reviews/respond", {
+      const res = await fetch(`${API_BASE}/api/owner/reviews/respond`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

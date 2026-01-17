@@ -9,6 +9,9 @@ import ReviewsPanel from "../components/ReviewsPanel";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useLocation } from "react-router-dom";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
+
+
 function OwnerDashboard() {
   const location = useLocation();
   const abortControllerRef = useRef(null);
@@ -58,7 +61,7 @@ function OwnerDashboard() {
       setLoading(true);
 
       const res = await fetch(
-        `http://localhost:5000/api/owner/dashboard/overview?ownerId=${ownerId}`,
+        `${API_BASE}/api/owner/dashboard/overview?ownerId=${ownerId}`,
         { 
           cache: "no-store",
           signal: abortControllerRef.current.signal 
