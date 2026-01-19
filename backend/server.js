@@ -24,15 +24,8 @@ if (!fs.existsSync("uploads")) {
 
 const app = express();
 
-/** * الحل الجذري لمشكلة Windows و CORS 
- * قمنا بإضافة 127.0.0.1 لأن ويندوز أحياناً لا يتعرف على localhost بشكل صحيح
- */
-app.use(cors({
-  origin: ["http://localhost:5173", "http://127.0.0.1:5173"], 
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true 
-}));
+// الحل النهائي: السماح لجميع الروابط بالوصول لضمان عمل الموقع على Render
+app.use(cors()); 
 
 app.use(express.json());
 
