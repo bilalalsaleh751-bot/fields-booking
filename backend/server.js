@@ -4,6 +4,7 @@ import cors from "cors";
 import fs from "fs";
 import connectDB from "./config/db.js";
 
+// استيراد الروابط
 import fieldRoutes from "./routes/fieldRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
@@ -14,6 +15,8 @@ import publicRoutes from "./routes/publicRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 
 dotenv.config();
+
+// الاتصال بقاعدة البيانات
 connectDB();
 
 // التأكد من وجود مجلد الرفع
@@ -24,15 +27,19 @@ if (!fs.existsSync("uploads")) {
 
 const app = express();
 
-// الحل النهائي: السماح لجميع الروابط بالوصول لضمان عمل الموقع على Render
-app.use(cors()); 
+// --- تحديث إعدادات CORS لتكون شاملة ومرنة ---
+app.use(cors({
+  origin: '*', // يسمح لأي رابط بالوصول (يحل مشكلة عدم ظهور الملاعب)
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 app.use(express.json());
 
-// Serve static files from uploads directory
+// تشغيل الملفات الثابتة (الصور)
 app.use("/uploads", express.static("uploads"));
 
-// ROUTES
+// --- ROUTES ---
 app.use("/api/fields", fieldRoutes);
 app.use("/api/fields", availabilityRoutes);
 app.use("/api/bookings", bookingRoutes);
@@ -43,8 +50,13 @@ app.use("/api/public", publicRoutes);
 app.use("/api/auth", authRoutes);
 
 app.get("/", (req, res) => {
-  res.send("API is running...");
+  res.send("API is running smoothly on Render...");
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// --- تحديث الـ Port والـ Host ليتوافق مع بيئة Render ---
+// Render يحتاج أن يعمل السيرفر على 0.0.0.0 ليكون متاحاً خارجياً
+const PORT = process.env.PORT || 10000; 
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running and accessible on port ${PORT}`);
+});
