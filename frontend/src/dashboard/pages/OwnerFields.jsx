@@ -16,6 +16,9 @@ import "../dashboard.css";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
 
+// Full URLs (e.g. Unsplash) are used as-is; uploaded paths are served by the backend
+const imageSrc = (img) => (img?.startsWith("http") ? img : `${API_BASE}/${img}`);
+
 
 const inputStyle = {
   padding: "10px 12px",
@@ -479,20 +482,20 @@ function OwnerFields() {
 
         {!loadingFields && fields.map((f) => (
           <div key={f._id} className="dashboard-panel" style={{ marginBottom: 16 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div className="owner-field-row">
+              <div className="owner-field-main">
                 {/* Thumbnail */}
                 <div style={{ width: 80, height: 60, borderRadius: 8, overflow: "hidden", background: "#e2e8f0", flexShrink: 0 }}>
                   {f.mainImage || f.images?.[0] ? (
-                    <img src={`${API_BASE}/${f.mainImage || f.images[0]}`} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <img src={imageSrc(f.mainImage || f.images[0])} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   ) : (
                     <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8", fontSize: 10 }}>No image</div>
                   )}
                 </div>
-                
+
                 {/* Info */}
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                <div className="owner-field-info">
+                  <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 4 }}>
                     <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: "#0f172a" }}>{f.name}</h3>
                     <span className={`badge ${f.isActive ? "badge-success" : "badge-danger"}`} style={{ fontSize: 10 }}>
                       {f.isActive ? "Active" : "Inactive"}
@@ -505,14 +508,14 @@ function OwnerFields() {
               </div>
               
               {/* Actions */}
-              <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => openAvailabilityFromList(f)} className="dashboard-date-pill" style={{ fontSize: 11, padding: "6px 12px" }}>
+              <div className="owner-field-actions">
+                <button onClick={() => openAvailabilityFromList(f)} className="dashboard-date-pill owner-field-action">
                   📅 Availability
                 </button>
-                <button onClick={() => toggleActive(f._id, f.isActive)} className="dashboard-date-pill" style={{ fontSize: 11, padding: "6px 12px" }}>
+                <button onClick={() => toggleActive(f._id, f.isActive)} className="dashboard-date-pill owner-field-action">
                   {f.isActive ? "Deactivate" : "Activate"}
                 </button>
-                <button onClick={() => handleEdit(f)} className="dashboard-primary-btn" style={{ fontSize: 11, padding: "6px 16px" }}>
+                <button onClick={() => handleEdit(f)} className="dashboard-primary-btn owner-field-action owner-field-action-primary">
                   Edit
                 </button>
               </div>
@@ -522,19 +525,8 @@ function OwnerFields() {
         
         {/* Availability Calendar Modal (list mode) */}
         {showAvailabilityCalendar && availabilityFieldId && (
-          <div style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "rgba(0,0,0,0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}>
-            <div style={{ width: "100%", maxWidth: 800, maxHeight: "90vh", overflow: "auto", margin: 20 }}>
+          <div className="owner-modal-overlay">
+            <div className="owner-modal-box">
               <AvailabilityCalendar
                 fieldId={availabilityFieldId}
                 openingHours={availabilityFieldData?.openingHours}
@@ -562,7 +554,7 @@ function OwnerFields() {
 
       <div className="dashboard-panel" style={{ marginBottom: 20 }}>
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 16, borderBottom: "2px solid #e2e8f0" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 20, paddingBottom: 16, borderBottom: "2px solid #e2e8f0" }}>
           <div>
             <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#0f172a" }}>
               {mode === "create" ? "Add New Field" : `Edit: ${form.name || "Field"}`}
@@ -619,7 +611,7 @@ function OwnerFields() {
           {/* SECTION 1: Basic Information */}
           <div style={sectionStyle}>
             <h3 style={sectionTitleStyle}>📋 Basic Information</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+            <div className="owner-form-grid owner-form-grid-3" style={{ marginBottom: 12 }}>
               <div>
                 <label style={labelStyle}>Field Name *</label>
                 <input style={inputStyle} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
@@ -653,7 +645,7 @@ function OwnerFields() {
                 </select>
               </div>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+            <div className="owner-form-grid owner-form-grid-3" style={{ marginBottom: 12 }}>
               <div>
                 <label style={labelStyle}>Surface Type</label>
                 <select 
@@ -697,7 +689,7 @@ function OwnerFields() {
           {/* SECTION 2: Location */}
           <div style={sectionStyle}>
             <h3 style={sectionTitleStyle}>📍 Location <span style={{ color: "#dc2626", fontSize: 12 }}>*Required</span></h3>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
+            <div className="owner-form-grid owner-form-grid-3" style={{ marginBottom: 16 }}>
               <div>
                 <label style={labelStyle}>City *</label>
                 <select 
@@ -762,7 +754,7 @@ function OwnerFields() {
           {/* SECTION 3: Opening Hours & Durations */}
           <div style={sectionStyle}>
             <h3 style={sectionTitleStyle}>⏰ Schedule & Booking</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+            <div className="owner-form-grid owner-form-grid-2" style={{ marginBottom: 16 }}>
               <div>
                 <label style={labelStyle}>Opening Time</label>
                 <input type="time" style={inputStyle} value={form.openingHours.open} onChange={(e) => setForm({ ...form, openingHours: { ...form.openingHours, open: e.target.value } })} />
@@ -801,7 +793,7 @@ function OwnerFields() {
           {/* SECTION 4: Amenities & Rules */}
           <div style={sectionStyle}>
             <h3 style={sectionTitleStyle}>✨ Amenities & Rules</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+            <div className="owner-form-grid owner-form-grid-2" style={{ gap: 20 }}>
               {/* Amenities */}
               <div>
                 <label style={labelStyle}>Amenities</label>
@@ -937,7 +929,7 @@ function OwnerFields() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 10, marginTop: 8 }}>
                   {editingFieldData?.images?.map((img, i) => (
                     <div key={i} style={{ position: "relative", borderRadius: 8, overflow: "hidden", border: "1px solid #e2e8f0" }}>
-                      <img src={`${API_BASE}/${img}`} alt="" style={{ width: "100%", height: 100, objectFit: "cover" }} />
+                      <img src={imageSrc(img)} alt="" style={{ width: "100%", height: 100, objectFit: "cover" }} />
                       <button
                         type="button"
                         onClick={() => handleImageDelete(img)}
@@ -1015,19 +1007,8 @@ function OwnerFields() {
           
           {/* Availability Calendar Modal (edit mode) */}
           {showAvailabilityCalendar && editingFieldId && mode === "edit" && (
-            <div style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: "rgba(0,0,0,0.5)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 1000,
-            }}>
-              <div style={{ width: "100%", maxWidth: 800, maxHeight: "90vh", overflow: "auto", margin: 20 }}>
+            <div className="owner-modal-overlay">
+              <div className="owner-modal-box">
                 <AvailabilityCalendar
                   fieldId={editingFieldId}
                   openingHours={form.openingHours}

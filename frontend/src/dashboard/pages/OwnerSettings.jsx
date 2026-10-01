@@ -277,7 +277,7 @@ function OwnerSettings() {
           <p className="dashboard-loading">Loading settings…</p>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: 20 }}>
+        <div className="owner-settings-layout">
           {/* Settings Sidebar */}
           <div className="dashboard-panel" style={{ padding: 0, margin: 0 }}>
             <div style={{ padding: 16 }}>
@@ -429,7 +429,7 @@ function OwnerSettings() {
                     />
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  <div className="owner-form-grid owner-form-grid-2" style={{ gap: 16 }}>
                     <div>
                       <label style={labelStyle}>City</label>
                       <input
@@ -482,7 +482,7 @@ function OwnerSettings() {
                   Payment & Payout Information
                 </h3>
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
+                <div className="owner-form-grid owner-form-grid-3" style={{ gap: 16, marginBottom: 24 }}>
                   <div style={{ padding: 20, background: "#f8fafc", borderRadius: 12 }}>
                     <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>Total Earnings</div>
                     <div style={{ fontSize: 24, fontWeight: 700, color: "#0f172a" }}>

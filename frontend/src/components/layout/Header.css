@@ -357,3 +357,27 @@
     font-size: 13px;
   }
 }
+
+/* Small screens: an older .main-header rule in index.css adds 32px side
+   padding on top of .header-container's own padding, which pushed the
+   header (and the Login button) past the edge of phone screens */
+@media (max-width: 768px) {
+  header.main-header {
+    padding: 0;
+  }
+
+  .header-container {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 360px) {
+  .header-container nav {
+    gap: 10px;
+  }
+
+  .header-container nav a {
+    font-size: 13px;
+  }
+}

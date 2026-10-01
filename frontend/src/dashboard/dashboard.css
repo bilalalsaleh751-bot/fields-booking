@@ -547,7 +547,9 @@ input[type="date"],
 input[type="time"],
 textarea,
 select {
-  height: var(--input-height);
+  /* min-height (not height): this rule applies app-wide, and pages that add
+     vertical padding (e.g. the home search) would otherwise clip the text */
+  min-height: var(--input-height);
   padding: 0 var(--space-md);
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
@@ -933,5 +935,177 @@ textarea::placeholder {
   .dashboard-table td {
     padding: 6px 8px;
     font-size: 9px;
+  }
+}
+
+/* ============================================================
+   MOBILE RESPONSIVE HELPERS (owner pages)
+   Desktop layout is unchanged; on phones these stack or scroll
+   instead of overflowing. Layout lives here (not inline styles)
+   because inline styles cannot change with screen size.
+   ============================================================ */
+
+/* Touch screens: comfortable tap targets (~44px) for every dashboard
+   button and input, without changing the mouse/desktop look */
+@media (pointer: coarse) {
+  :root {
+    --button-height: 44px;
+    --input-height: 44px;
+  }
+}
+
+/* My Fields: one card per field */
+.owner-field-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.owner-field-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0; /* lets the name wrap normally instead of one word per line */
+}
+
+.owner-field-info {
+  min-width: 0;
+}
+
+.owner-field-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.owner-field-action {
+  font-size: 11px;
+  padding: 6px 12px;
+}
+
+.owner-field-action-primary {
+  padding: 6px 16px;
+}
+
+/* Modals: always inside the screen, content scrolls */
+.owner-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+}
+
+.owner-modal-box {
+  width: 100%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+/* Form rows and stat cards */
+.owner-form-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.owner-form-grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.owner-form-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.owner-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+/* Settings: section menu + content */
+.owner-settings-layout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 20px;
+}
+
+/* Bookings: category tabs scroll sideways instead of overflowing */
+.owner-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.owner-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.owner-tabs > button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Availability calendar: calendar + time slots side by side */
+.owner-calendar-content {
+  grid-template-columns: 1fr 1fr;
+}
+
+@media (max-width: 768px) {
+  .owner-settings-layout {
+    grid-template-columns: minmax(0, 1fr); /* minmax(0,...) lets wide content shrink instead of overflowing */
+  }
+
+  .owner-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  /* Tables scroll sideways (wrapper) at a readable size instead of shrinking */
+  .dashboard-table-wrapper .dashboard-table {
+    min-width: 600px;
+  }
+
+  .dashboard-table-wrapper .dashboard-table th,
+  .dashboard-table-wrapper .dashboard-table td {
+    font-size: 12px;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 640px) {
+  .owner-field-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .owner-field-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .owner-field-actions > button {
+    flex: 1 1 0;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .owner-form-grid-2,
+  .owner-form-grid-3,
+  .owner-calendar-content {
+    grid-template-columns: minmax(0, 1fr); /* minmax(0,...) lets wide content shrink instead of overflowing */
+  }
+
+  .owner-modal-overlay {
+    padding: 8px;
+  }
+
+  .owner-modal-box {
+    max-height: calc(100vh - 16px);
   }
 }

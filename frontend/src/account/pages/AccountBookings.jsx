@@ -4,6 +4,9 @@ import "./AccountPages.css";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5050";
 
+// Full URLs (e.g. Unsplash) are used as-is; uploaded paths are served by the backend
+const imageSrc = (img) => (img?.startsWith("http") ? img : `${API_BASE}/${img}`);
+
 
 // Status labels with Arabic translations
 const STATUS_LABELS = {
@@ -301,7 +304,7 @@ export default function AccountBookings() {
               <div className="booking-image">
                 {booking.field?.mainImage || booking.field?.images?.[0] ? (
                   <img
-                    src={`${API_BASE}/${booking.field.mainImage || booking.field.images[0]}`}
+                    src={imageSrc(booking.field.mainImage || booking.field.images[0])}
                     alt={booking.field?.name}
                   />
                 ) : (

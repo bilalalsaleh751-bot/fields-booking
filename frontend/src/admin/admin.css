@@ -1109,3 +1109,22 @@
   }
 }
 
+
+/* ============================================================
+   TOUCH SCREENS: comfortable tap targets (~44px)
+   Mouse/desktop sizes are unchanged.
+   ============================================================ */
+@media (pointer: coarse) {
+  .admin-btn,
+  .admin-filter-select,
+  .admin-form-select,
+  .admin-form-input,
+  .admin-filter-input {
+    min-height: 44px;
+  }
+
+  .admin-modal-close {
+    width: 44px;
+    height: 44px;
+  }
+}

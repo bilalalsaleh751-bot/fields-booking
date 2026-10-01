@@ -45,6 +45,7 @@ function BookingsTable({ bookings }) {
         </button>
       </div>
 
+      <div className="dashboard-table-wrapper">
       <table className="dashboard-table">
         <thead>
           <tr>
@@ -110,6 +111,7 @@ function BookingsTable({ bookings }) {
           ))}
         </tbody>
       </table>
+      </div>
     </section>
   );
 }

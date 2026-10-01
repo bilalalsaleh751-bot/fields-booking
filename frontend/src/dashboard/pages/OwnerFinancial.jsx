@@ -102,7 +102,7 @@ function OwnerFinancial() {
             return (
               <>
                 {/* Earnings Summary */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 20 }}>
+                <div className="owner-stats-grid" style={{ marginBottom: 20 }}>
                   <div className="dashboard-panel" style={{ margin: 0, padding: 16 }}>
                     <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4, fontWeight: 500 }}>
                       {isThisMonth ? "This Month Earnings" : "Last Month Earnings"}
@@ -143,7 +143,7 @@ function OwnerFinancial() {
                     <h3 style={{ margin: "0 0 16px 0", fontSize: 15, fontWeight: 600, color: "#0f172a" }}>
                       Booking Status (This Month)
                     </h3>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+                    <div className="owner-stats-grid">
                       <div style={{ 
                         padding: 16, 
                         background: "#f0fdf4", 

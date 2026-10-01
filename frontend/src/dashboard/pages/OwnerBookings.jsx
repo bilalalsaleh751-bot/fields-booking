@@ -313,9 +313,8 @@ function OwnerBookings() {
 
           {/* Category Tabs */}
           <div
+            className="owner-tabs"
             style={{
-              display: "flex",
-              gap: 8,
               marginTop: 20,
               borderBottom: "1px solid #e2e8f0",
               paddingBottom: 0,
@@ -395,6 +394,7 @@ function OwnerBookings() {
         {/* Bookings Table */}
         {!loading && filteredBookings.length > 0 && (
           <div className="dashboard-panel">
+            <div className="dashboard-table-wrapper">
             <table className="dashboard-table">
               <thead>
                 <tr>
@@ -535,6 +535,7 @@ function OwnerBookings() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
 
@@ -775,9 +776,9 @@ function OwnerBookings() {
                     borderRadius: 12,
                     padding: 16,
                     display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
                     gap: 16,
                   }}
+                  className="owner-form-grid-2"
                 >
                   <div>
                     <div style={{ fontSize: 12, color: "#64748b" }}>Date</div>

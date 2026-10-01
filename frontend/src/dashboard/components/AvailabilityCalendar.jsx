@@ -264,7 +264,7 @@ export default function AvailabilityCalendar({ fieldId, openingHours, onClose })
       
       {error && <div style={styles.error}>{error}</div>}
       
-      <div style={styles.content}>
+      <div className="owner-calendar-content" style={styles.content}>
         {/* Calendar */}
         <div style={styles.calendarSection}>
           {/* Month Navigation */}
@@ -435,8 +435,7 @@ const styles = {
     color: "#6b7280",
   },
   content: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
+    display: "grid", // columns: .owner-calendar-content in dashboard.css (stacks on phones)
     minHeight: "400px",
   },
   calendarSection: {
