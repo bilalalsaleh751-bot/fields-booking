@@ -5,6 +5,18 @@
 
 A comprehensive full-stack web application for booking sports fields and courts across Lebanon. Built with the MERN stack, this platform enables users to discover, book, and manage sports field reservations while providing field owners with powerful management tools and administrators with complete control over the platform.
 
+## 🔗 Live Demo
+https://fields-booking-1.onrender.com/
+
+### Test Accounts
+| Role  | Email            | Password  |
+|-------|------------------|-----------|
+| Admin | admin@gmail.com  | 123456789 |
+| Owner | owner@gmail.com  | 123456789 |
+| User  | bilal@gmail.com  | 123456789 |
+
+> Note: this is a free-tier hosted demo — the server may take ~30–60s to wake up on first load.
+
 ## Features
 
 - **Multi-Role System**: Unified authentication supporting Users, Field Owners, and Administrators
