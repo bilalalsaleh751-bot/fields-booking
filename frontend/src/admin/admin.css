@@ -1095,12 +1095,16 @@
   background: rgba(0, 0, 0, 0.5);
   z-index: 999;
   opacity: 0;
+  /* On phones this overlay stays display:block (for the fade), so while the
+     menu is closed it must not catch taps meant for the page underneath */
+  pointer-events: none;
   transition: opacity 0.3s ease;
 }
 
 .admin-sidebar-overlay.active {
   display: block;
   opacity: 1;
+  pointer-events: auto;
 }
 
 @media (max-width: 768px) {

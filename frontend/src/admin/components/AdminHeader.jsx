@@ -18,26 +18,30 @@ function AdminHeader({ onMenuToggle, isMenuOpen }) {
   };
 
   return (
-    <header className="admin-header">
-      <button 
+    <>
+      {/* Kept outside <header>: the sticky header (z-index 100) would trap this
+          fixed button below the sidebar overlay (z-index 999) on mobile */}
+      <button
         className={`admin-mobile-menu-toggle ${isMenuOpen ? 'active' : ''}`}
         onClick={onMenuToggle}
         aria-label="Toggle menu"
       >
         {isMenuOpen ? '✕' : '☰'}
       </button>
-      <h1 className="admin-page-title">{getPageTitle()}</h1>
-      <div className="admin-header-actions">
-        <span className="admin-date">
-          {new Date().toLocaleDateString("en-US", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}
-        </span>
-      </div>
-    </header>
+      <header className="admin-header">
+        <h1 className="admin-page-title">{getPageTitle()}</h1>
+        <div className="admin-header-actions">
+          <span className="admin-date">
+            {new Date().toLocaleDateString("en-US", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </span>
+        </div>
+      </header>
+    </>
   );
 }
 
