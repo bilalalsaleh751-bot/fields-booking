@@ -1,0 +1,6 @@
+# Keep local secrets and locally-installed packages out of the Docker image.
+# Render provides the environment variables; `npm ci` installs fresh packages.
+node_modules
+.env
+.env.*
+npm-debug.log*

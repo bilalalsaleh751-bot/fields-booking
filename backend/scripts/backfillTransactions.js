@@ -23,7 +23,7 @@ import Owner from "../models/Owner.js";
 import Transaction from "../models/Transaction.js";
 import PlatformSettings from "../models/PlatformSettings.js";
 
-const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/fields-booking";
+const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || "mongodb://localhost:27017/fields-booking";
 
 async function backfillTransactions() {
   console.log("🔌 Connecting to MongoDB...");

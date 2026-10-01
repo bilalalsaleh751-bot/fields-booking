@@ -30,7 +30,7 @@ import Owner from "../models/Owner.js";    // May be referenced by Field
 void Field;
 void Owner;
 
-const MONGODB_URI = process.env.MONGO_URI || "mongodb://localhost:27017/fields-booking";
+const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI || "mongodb://localhost:27017/fields-booking";
 
 // Helper: Convert time string to minutes
 const timeToMinutes = (timeStr) => {

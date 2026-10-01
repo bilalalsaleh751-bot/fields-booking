@@ -20,7 +20,7 @@ dotenv.config({ path: path.join(__dirname, "..", ".env") });
 import Field from "../models/Field.js";
 import Owner from "../models/Owner.js";
 
-const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/fields-booking";
+const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || "mongodb://localhost:27017/fields-booking";
 
 async function migrateApprovalStatus() {
   console.log("🔌 Connecting to MongoDB...");

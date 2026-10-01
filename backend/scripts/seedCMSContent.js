@@ -14,7 +14,7 @@ import FAQ from "../models/FAQ.js";
 
 const seedCMSContent = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI);
+    await mongoose.connect(process.env.MONGODB_URI || process.env.MONGO_URI);
     console.log("✅ Connected to MongoDB");
 
     // ========== HOMEPAGE CONTENT ==========

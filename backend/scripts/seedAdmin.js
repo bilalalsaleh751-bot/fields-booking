@@ -20,7 +20,7 @@ dotenv.config({ path: path.join(__dirname, "..", ".env") });
 // Import model
 import Admin from "../models/Admin.js";
 
-const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/fields-booking";
+const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || "mongodb://localhost:27017/fields-booking";
 
 async function seedAdmin() {
   console.log("🔌 Connecting to MongoDB...");
